@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Trend Hunter Bot — Strategy Settings & API Configuration">
+    <title>Trend Hunter Bot — Settings</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+</head>
+<body>
+
+<div class="app-container">
+
+    <!-- ═══ Top Navigation ═══ -->
+    <nav class="top-nav">
+        <div class="nav-brand">
+            <div class="nav-logo">🎯</div>
+            <div>
+                <div class="nav-title">Trend Hunter</div>
+                <div class="nav-subtitle">Futures Breakout Bot</div>
+            </div>
+        </div>
+
+        <div class="nav-links">
+            <a href="/" class="nav-link" id="nav-dashboard">📊 Dashboard</a>
+            <a href="/settings" class="nav-link active" id="nav-settings">⚙️ Settings</a>
+            <a href="/trades" class="nav-link" id="nav-trades">📋 Trades</a>
+        </div>
+
+        <div class="nav-status">
+            <span id="testnet-badge" class="testnet-badge">TESTNET</span>
+        </div>
+    </nav>
+
+    <!-- ═══ Page Header ═══ -->
+    <div class="section-header">
+        <div>
+            <h1 class="section-title">Settings</h1>
+            <p class="section-desc">Configure API keys, strategy parameters, and safety guards</p>
+        </div>
+    </div>
+
+    <div class="settings-grid">
+
+        <!-- ═══ API Configuration ═══ -->
+        <div class="card col-span-2">
+            <div class="card-header">
+                <span class="card-title">🔑 API Configuration</span>
+                <span id="api-key-status" style="font-size: 0.78rem; color: var(--text-muted);">No API key configured</span>
+            </div>
+
+            <div class="grid-2" style="gap: var(--space-lg);">
+                <div class="form-group">
+                    <label class="form-label" for="api_key">Delta Exchange API Key</label>
+                    <input type="password" id="api_key" class="form-input" placeholder="Enter your API key">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="api_secret">API Secret</label>
+                    <input type="password" id="api_secret" class="form-input" placeholder="Enter your API secret">
+                </div>
+            </div>
+
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-name">Testnet Mode</div>
+                    <div class="setting-desc">
+                        Use Delta Exchange testnet (demo account) for testing. Disable for real trading.
+                    </div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="testnet_toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div class="btn-group" style="margin-top: var(--space-lg);">
+                <button class="btn btn-primary" onclick="saveApiKeys()">💾 Save API Keys</button>
+                <button id="btn-test-conn" class="btn btn-outline" onclick="testConnection()">🔌 Test Connection</button>
+            </div>
+        </div>
+
+        <!-- ═══ Asset Configuration ═══ -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">📊 Asset Configuration</span>
+            </div>
+
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-name">BTC / USD Perpetual</div>
+                    <div class="setting-desc">Enable trading on BTCUSD</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="btc_enabled" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div class="form-group" style="margin-top: var(--space-md);">
+                <label class="form-label" for="btc_quantity">BTC Contract Quantity</label>
+                <input type="number" id="btc_quantity" class="form-input" value="10" min="1" max="10000">
+            </div>
+
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-name">ETH / USD Perpetual</div>
+                    <div class="setting-desc">Enable trading on ETHUSD</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="eth_enabled" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div class="form-group" style="margin-top: var(--space-md);">
+                <label class="form-label" for="eth_quantity">ETH Contract Quantity</label>
+                <input type="number" id="eth_quantity" class="form-input" value="10" min="1" max="10000">
+            </div>
+        </div>
+
+        <!-- ═══ Strategy Parameters ═══ -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">⚡ Strategy Parameters</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="candle_resolution">Candle Timeframe</label>
+                <select id="candle_resolution" class="form-input">
+                    <option value="1m">1 Minute</option>
+                    <option value="5m">5 Minutes</option>
+                    <option value="15m" selected>15 Minutes (Recommended)</option>
+                    <option value="30m">30 Minutes</option>
+                    <option value="1h">1 Hour</option>
+                </select>
+                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
+                    Timeframe of candles used to calculate the breakout range
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="lookback_candles">Lookback Candles</label>
+                <select id="lookback_candles" class="form-input">
+                    <option value="4">4 candles</option>
+                    <option value="6" selected>6 candles (Recommended)</option>
+                    <option value="8">8 candles</option>
+                    <option value="12">12 candles</option>
+                    <option value="16">16 candles</option>
+                    <option value="24">24 candles</option>
+                </select>
+                <div id="lookback-info" style="font-size: 0.72rem; color: var(--accent-cyan); margin-top: 4px;">
+                    6 × 15m = 1.5 hour range window
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">
+                    Breakout Buffer: <span id="buffer-label" style="color: var(--accent-cyan);">0.1%</span>
+                </label>
+                <input type="range" id="breakout_buffer_pct" class="form-range" min="0.01" max="1.0" step="0.01" value="0.1">
+                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">
+                    <span>0.01%</span>
+                    <span>1.0%</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="leverage">Leverage</label>
+                <select id="leverage" class="form-input">
+                    <option value="1">1x</option>
+                    <option value="2">2x</option>
+                    <option value="5">5x</option>
+                    <option value="10" selected>10x</option>
+                    <option value="20">20x</option>
+                    <option value="50">50x</option>
+                    <option value="100">100x</option>
+                    <option value="200">200x</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- ═══ Safety Guards ═══ -->
+        <div class="card col-span-2">
+            <div class="card-header">
+                <span class="card-title">🛡️ Safety Guards</span>
+            </div>
+
+            <div class="grid-2" style="gap: var(--space-lg);">
+                <div class="form-group">
+                    <label class="form-label" for="cooldown_minutes">Whipsaw Cooldown (minutes)</label>
+                    <input type="number" id="cooldown_minutes" class="form-input" value="5" min="1" max="60">
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
+                        Minimum wait time between trades on the same asset
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="max_daily_loss">Max Daily Loss ($)</label>
+                    <input type="number" id="max_daily_loss" class="form-input" value="100" min="10" step="10">
+                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
+                        Bot auto-pauses if daily loss exceeds this limit
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: var(--space-lg);">
+                <button class="btn btn-primary btn-lg" onclick="saveSettings()" style="width: 100%;">
+                    💾 Save All Settings
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

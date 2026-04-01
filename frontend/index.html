@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Trend Hunter Futures Bot — Automated BTC/ETH breakout trading on Delta Exchange India">
+    <title>Trend Hunter Bot — Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+</head>
+<body>
+
+<div class="app-container">
+
+    <!-- ═══ Top Navigation ═══ -->
+    <nav class="top-nav">
+        <div class="nav-brand">
+            <div class="nav-logo">🎯</div>
+            <div>
+                <div class="nav-title">Trend Hunter</div>
+                <div class="nav-subtitle">Futures Breakout Bot</div>
+            </div>
+        </div>
+
+        <div class="nav-links">
+            <a href="/" class="nav-link active" id="nav-dashboard">📊 Dashboard</a>
+            <a href="/settings" class="nav-link" id="nav-settings">⚙️ Settings</a>
+            <a href="/trades" class="nav-link" id="nav-trades">📋 Trades</a>
+        </div>
+
+        <div class="nav-status">
+            <span id="testnet-badge" class="testnet-badge">TESTNET</span>
+            <div id="connection-dot" class="connection-dot disconnected" title="WebSocket Connection"></div>
+            <div id="bot-status-badge" class="status-badge stopped">
+                <span class="status-dot"></span>STOPPED
+            </div>
+        </div>
+    </nav>
+
+    <!-- ═══ Bot Controls ═══ -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-xl);">
+        <div>
+            <h1 class="section-title">Dashboard</h1>
+            <p class="section-desc">Monitor live prices, signals, and positions</p>
+        </div>
+        <div class="btn-group">
+            <button id="btn-start" class="btn btn-success" onclick="startBot()">▶ Start Bot</button>
+            <button id="btn-pause" class="btn btn-outline" onclick="pauseBot()" disabled>⏸ Pause</button>
+            <button id="btn-stop" class="btn btn-danger" onclick="stopBot()" disabled>⏹ Stop</button>
+        </div>
+    </div>
+
+    <!-- ═══ Price Tickers ═══ -->
+    <div class="grid-2" style="margin-bottom: var(--space-xl);">
+
+        <!-- BTC Card -->
+        <div class="card" id="card-btc">
+            <div class="card-header">
+                <div>
+                    <span class="card-title">BTC / USD</span>
+                    <span style="font-size: 0.7rem; color: var(--text-muted); margin-left: 8px;">Perpetual</span>
+                </div>
+                <span class="card-icon">₿</span>
+            </div>
+
+            <div id="price-BTCUSD" class="price-value">$—</div>
+
+            <div class="breakout-bar-container" style="margin-top: 16px;">
+                <div id="fill-BTCUSD" class="breakout-bar-fill" style="width: 50%; background: var(--gradient-primary);"></div>
+                <div id="marker-BTCUSD" class="breakout-marker current" style="left: 50%;"></div>
+            </div>
+            <div class="breakout-labels">
+                <span>Low: <span id="low-BTCUSD">—</span></span>
+                <span>High: <span id="high-BTCUSD">—</span></span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 12px; font-size: 0.78rem;">
+                <div>
+                    <span style="color: var(--text-muted);">Position: </span>
+                    <span id="position-BTCUSD" style="font-weight: 600;">None</span>
+                </div>
+                <div>
+                    <span style="color: var(--text-muted);">Vol: </span>
+                    <span id="vol-BTCUSD" style="font-family: 'JetBrains Mono', monospace;">—</span>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.72rem; color: var(--text-muted);">
+                <span>Breakout ↑ <span id="buf-high-BTCUSD">—</span></span>
+                <span>Breakout ↓ <span id="buf-low-BTCUSD">—</span></span>
+            </div>
+        </div>
+
+        <!-- ETH Card -->
+        <div class="card" id="card-eth">
+            <div class="card-header">
+                <div>
+                    <span class="card-title">ETH / USD</span>
+                    <span style="font-size: 0.7rem; color: var(--text-muted); margin-left: 8px;">Perpetual</span>
+                </div>
+                <span class="card-icon">⟠</span>
+            </div>
+
+            <div id="price-ETHUSD" class="price-value">$—</div>
+
+            <div class="breakout-bar-container" style="margin-top: 16px;">
+                <div id="fill-ETHUSD" class="breakout-bar-fill" style="width: 50%; background: var(--gradient-primary);"></div>
+                <div id="marker-ETHUSD" class="breakout-marker current" style="left: 50%;"></div>
+            </div>
+            <div class="breakout-labels">
+                <span>Low: <span id="low-ETHUSD">—</span></span>
+                <span>High: <span id="high-ETHUSD">—</span></span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 12px; font-size: 0.78rem;">
+                <div>
+                    <span style="color: var(--text-muted);">Position: </span>
+                    <span id="position-ETHUSD" style="font-weight: 600;">None</span>
+                </div>
+                <div>
+                    <span style="color: var(--text-muted);">Vol: </span>
+                    <span id="vol-ETHUSD" style="font-family: 'JetBrains Mono', monospace;">—</span>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.72rem; color: var(--text-muted);">
+                <span>Breakout ↑ <span id="buf-high-ETHUSD">—</span></span>
+                <span>Breakout ↓ <span id="buf-low-ETHUSD">—</span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Stats & Positions ═══ -->
+    <div class="grid-dashboard">
+
+        <!-- Stats Panel -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">📈 Bot Statistics</span>
+            </div>
+            <div class="grid-2" style="gap: var(--space-lg);">
+                <div>
+                    <div id="stat-daily-pnl" class="stat-value" style="color: var(--text-bright);">$0.00</div>
+                    <div class="stat-label">Daily PnL</div>
+                </div>
+                <div>
+                    <div id="stat-signals" class="stat-value">0</div>
+                    <div class="stat-label">Signals Today</div>
+                </div>
+                <div>
+                    <div id="stat-trades" class="stat-value">0</div>
+                    <div class="stat-label">Trades Executed</div>
+                </div>
+                <div>
+                    <div id="stat-last-check" class="stat-value" style="font-size: 1rem;">—</div>
+                    <div class="stat-label">Last Check</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Positions Panel -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">📊 Active Positions</span>
+            </div>
+            <div id="positions-container">
+                <div class="empty-state">
+                    <div class="empty-icon">📊</div>
+                    <div class="empty-text">No active positions</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
