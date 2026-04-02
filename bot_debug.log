@@ -1,45 +1,66 @@
-2026-04-02 17:06:06 [INFO] backend.main: ============================================================
-2026-04-02 17:06:06 [INFO] backend.main: 🚀 Trend Hunter Futures Bot starting...
-2026-04-02 17:06:06 [INFO] backend.main: ============================================================
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing <function connect.<locals>.connector at 0x0000026F477CE980>
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation <function connect.<locals>.connector at 0x0000026F477CE980> completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method create_function of sqlite3.Connection object at 0x0000026F477F0130>, 'regexp', 2, <function SQLiteDialect_pysqlite.on_connect.<locals>.regexp at 0x0000026F472F5940>, deterministic=True)
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method create_function of sqlite3.Connection object at 0x0000026F477F0130>, 'regexp', 2, <function SQLiteDialect_pysqlite.on_connect.<locals>.regexp at 0x0000026F472F5940>, deterministic=True) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method create_function of sqlite3.Connection object at 0x0000026F477F0130>, 'floor', 1, <built-in function floor>, deterministic=True)
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method create_function of sqlite3.Connection object at 0x0000026F477F0130>, 'floor', 1, <built-in function floor>, deterministic=True) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000026F477F0130>)
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000026F477F0130>) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000026F477D6040>, 'PRAGMA read_uncommitted', [])
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000026F477D6040>, 'PRAGMA read_uncommitted', []) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000026F477D6040>)
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000026F477D6040>) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000026F477D6040>)
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000026F477D6040>) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method rollback of sqlite3.Connection object at 0x0000026F477F0130>)
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method rollback of sqlite3.Connection object at 0x0000026F477F0130>) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000026F477F0130>)
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000026F477F0130>) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000026F477D6240>, 'PRAGMA main.table_info("trade_logs")', ())
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000026F477D6240>, 'PRAGMA main.table_info("trade_logs")', ()) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000026F477D6240>)
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000026F477D6240>) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000026F477D6240>)
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000026F477D6240>) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000026F477F0130>)
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000026F477F0130>) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000026F477D62C0>, 'PRAGMA main.table_info("bot_settings")', ())
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000026F477D62C0>, 'PRAGMA main.table_info("bot_settings")', ()) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000026F477D62C0>)
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000026F477D62C0>) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000026F477D62C0>)
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000026F477D62C0>) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method commit of sqlite3.Connection object at 0x0000026F477F0130>)
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method commit of sqlite3.Connection object at 0x0000026F477F0130>) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method rollback of sqlite3.Connection object at 0x0000026F477F0130>)
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method rollback of sqlite3.Connection object at 0x0000026F477F0130>) completed
-2026-04-02 17:06:06 [DEBUG] aiosqlite: executing functools.partial(<built-in method close of sqlite3.Connection object at 0x0000026F477F0130>)
-2026-04-02 17:06:06 [DEBUG] aiosqlite: operation functools.partial(<built-in method close of sqlite3.Connection object at 0x0000026F477F0130>) completed
-2026-04-02 17:06:06 [INFO] backend.main: ✅ Database initialized
-2026-04-02 17:06:06 [INFO] backend.scheduler.bot_runner: Bot initialized | Candles: 6x 15m | Buffer: 0.1%
-2026-04-02 17:06:06 [INFO] backend.main: ✅ Bot initialized
-2026-04-02 17:06:07 [INFO] backend.routers.dashboard: WebSocket client connected. Total: 1
+2026-04-02 17:10:15 [INFO] backend.main: ============================================================
+2026-04-02 17:10:15 [INFO] backend.main: 🚀 Trend Hunter Futures Bot starting...
+2026-04-02 17:10:15 [INFO] backend.main: ============================================================
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing <function connect.<locals>.connector at 0x000002CE080A2E80>
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation <function connect.<locals>.connector at 0x000002CE080A2E80> completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method create_function of sqlite3.Connection object at 0x000002CE080C4130>, 'regexp', 2, <function SQLiteDialect_pysqlite.on_connect.<locals>.regexp at 0x000002CE07B85E40>, deterministic=True)
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method create_function of sqlite3.Connection object at 0x000002CE080C4130>, 'regexp', 2, <function SQLiteDialect_pysqlite.on_connect.<locals>.regexp at 0x000002CE07B85E40>, deterministic=True) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method create_function of sqlite3.Connection object at 0x000002CE080C4130>, 'floor', 1, <built-in function floor>, deterministic=True)
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method create_function of sqlite3.Connection object at 0x000002CE080C4130>, 'floor', 1, <built-in function floor>, deterministic=True) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method cursor of sqlite3.Connection object at 0x000002CE080C4130>)
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method cursor of sqlite3.Connection object at 0x000002CE080C4130>) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method execute of sqlite3.Cursor object at 0x000002CE080AA1C0>, 'PRAGMA read_uncommitted', [])
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method execute of sqlite3.Cursor object at 0x000002CE080AA1C0>, 'PRAGMA read_uncommitted', []) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x000002CE080AA1C0>)
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x000002CE080AA1C0>) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x000002CE080AA1C0>)
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x000002CE080AA1C0>) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method rollback of sqlite3.Connection object at 0x000002CE080C4130>)
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method rollback of sqlite3.Connection object at 0x000002CE080C4130>) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method cursor of sqlite3.Connection object at 0x000002CE080C4130>)
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method cursor of sqlite3.Connection object at 0x000002CE080C4130>) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method execute of sqlite3.Cursor object at 0x000002CE080AA3C0>, 'PRAGMA main.table_info("trade_logs")', ())
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method execute of sqlite3.Cursor object at 0x000002CE080AA3C0>, 'PRAGMA main.table_info("trade_logs")', ()) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x000002CE080AA3C0>)
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x000002CE080AA3C0>) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x000002CE080AA3C0>)
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x000002CE080AA3C0>) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method cursor of sqlite3.Connection object at 0x000002CE080C4130>)
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method cursor of sqlite3.Connection object at 0x000002CE080C4130>) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method execute of sqlite3.Cursor object at 0x000002CE080AA440>, 'PRAGMA main.table_info("bot_settings")', ())
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method execute of sqlite3.Cursor object at 0x000002CE080AA440>, 'PRAGMA main.table_info("bot_settings")', ()) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x000002CE080AA440>)
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x000002CE080AA440>) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x000002CE080AA440>)
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x000002CE080AA440>) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method commit of sqlite3.Connection object at 0x000002CE080C4130>)
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method commit of sqlite3.Connection object at 0x000002CE080C4130>) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method rollback of sqlite3.Connection object at 0x000002CE080C4130>)
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method rollback of sqlite3.Connection object at 0x000002CE080C4130>) completed
+2026-04-02 17:10:15 [DEBUG] aiosqlite: executing functools.partial(<built-in method close of sqlite3.Connection object at 0x000002CE080C4130>)
+2026-04-02 17:10:15 [DEBUG] aiosqlite: operation functools.partial(<built-in method close of sqlite3.Connection object at 0x000002CE080C4130>) completed
+2026-04-02 17:10:15 [INFO] backend.main: ✅ Database initialized
+2026-04-02 17:10:15 [INFO] backend.scheduler.bot_runner: Bot initialized | Candles: 6x 15m | Buffer: 0.1%
+2026-04-02 17:10:15 [INFO] backend.main: ✅ Bot initialized
+2026-04-02 17:10:15 [INFO] backend.routers.dashboard: WebSocket client connected. Total: 1
+2026-04-02 17:10:26 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): cdn-ind.testnet.deltaex.org:443
+2026-04-02 17:10:27 [DEBUG] urllib3.connectionpool: https://cdn-ind.testnet.deltaex.org:443 "GET /v2/history/candles?resolution=5m&symbol=ETHUSD&start=1775099726&end=1775130026 HTTP/1.1" 200 None
+2026-04-02 17:10:27 [DEBUG] backend.exchange.delta_client: Fetched 100 candles for ETHUSD (5m)
+2026-04-02 17:10:27 [DEBUG] urllib3.connectionpool: https://cdn-ind.testnet.deltaex.org:443 "GET /v2/history/candles?resolution=5m&symbol=ETHUSD&start=1775099727&end=1775130027 HTTP/1.1" 200 None
+2026-04-02 17:10:27 [DEBUG] backend.exchange.delta_client: Fetched 100 candles for ETHUSD (5m)
+2026-04-02 17:10:28 [DEBUG] urllib3.connectionpool: https://cdn-ind.testnet.deltaex.org:443 "GET /v2/history/candles?resolution=5m&symbol=BTCUSD&start=1775099728&end=1775130028 HTTP/1.1" 200 None
+2026-04-02 17:10:28 [DEBUG] backend.exchange.delta_client: Fetched 100 candles for BTCUSD (5m)
+2026-04-02 17:10:28 [INFO] backend.routers.dashboard: WebSocket client connected. Total: 2
+2026-04-02 17:10:28 [INFO] backend.routers.dashboard: WebSocket client disconnected
+2026-04-02 17:10:58 [DEBUG] urllib3.connectionpool: https://cdn-ind.testnet.deltaex.org:443 "GET /v2/history/candles?resolution=5m&symbol=BTCUSD&start=1775099758&end=1775130058 HTTP/1.1" 200 None
+2026-04-02 17:10:58 [DEBUG] backend.exchange.delta_client: Fetched 100 candles for BTCUSD (5m)
+2026-04-02 17:10:59 [DEBUG] urllib3.connectionpool: https://cdn-ind.testnet.deltaex.org:443 "GET /v2/history/candles?resolution=5m&symbol=BTCUSD&start=1775099758&end=1775130058 HTTP/1.1" 200 None
+2026-04-02 17:10:59 [DEBUG] backend.exchange.delta_client: Fetched 100 candles for BTCUSD (5m)
+2026-04-02 17:11:28 [DEBUG] urllib3.connectionpool: https://cdn-ind.testnet.deltaex.org:443 "GET /v2/history/candles?resolution=5m&symbol=BTCUSD&start=1775099788&end=1775130088 HTTP/1.1" 200 None
+2026-04-02 17:11:28 [DEBUG] backend.exchange.delta_client: Fetched 101 candles for BTCUSD (5m)
+2026-04-02 17:11:29 [DEBUG] urllib3.connectionpool: https://cdn-ind.testnet.deltaex.org:443 "GET /v2/history/candles?resolution=5m&symbol=BTCUSD&start=1775099788&end=1775130088 HTTP/1.1" 200 None
+2026-04-02 17:11:29 [DEBUG] backend.exchange.delta_client: Fetched 101 candles for BTCUSD (5m)
+2026-04-02 17:11:58 [DEBUG] urllib3.connectionpool: https://cdn-ind.testnet.deltaex.org:443 "GET /v2/history/candles?resolution=5m&symbol=BTCUSD&start=1775099818&end=1775130118 HTTP/1.1" 200 None
+2026-04-02 17:11:58 [DEBUG] backend.exchange.delta_client: Fetched 101 candles for BTCUSD (5m)
+2026-04-02 17:11:59 [DEBUG] urllib3.connectionpool: https://cdn-ind.testnet.deltaex.org:443 "GET /v2/history/candles?resolution=5m&symbol=BTCUSD&start=1775099818&end=1775130118 HTTP/1.1" 200 None
+2026-04-02 17:11:59 [DEBUG] backend.exchange.delta_client: Fetched 101 candles for BTCUSD (5m)

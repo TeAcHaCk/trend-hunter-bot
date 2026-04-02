@@ -279,9 +279,14 @@ function updateStrategiesUI() {
 
         // Trade status panel
         const tradePanel = document.getElementById(`trade-status-${symbol}`);
-        if (tradePanel) {
-            if (strat.in_trade) {
-                tradePanel.style.display = 'block';
+        const orderPanel = document.getElementById(`order-status-${symbol}`);
+
+        if (strat.in_trade) {
+            // Show trade panel, hide order panel
+            if (tradePanel) tradePanel.style.display = 'block';
+            if (orderPanel) orderPanel.style.display = 'none';
+
+            if (tradePanel) {
                 const dirEl = document.getElementById(`trade-dir-${symbol}`);
                 if (dirEl) {
                     dirEl.textContent = `${strat.trade_direction === 'LONG' ? '↑' : '↓'} ${strat.trade_direction}`;
@@ -304,8 +309,54 @@ function updateStrategiesUI() {
                     pnlEl.textContent = `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`;
                     pnlEl.style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
                 }
-            } else {
-                tradePanel.style.display = 'none';
+            }
+        } else if (strat.orders_placed) {
+            // Show order panel, hide trade panel
+            if (tradePanel) tradePanel.style.display = 'none';
+            if (orderPanel) {
+                orderPanel.style.display = 'block';
+
+                // Buy order
+                const buyPrice = document.getElementById(`order-buy-price-${symbol}`);
+                const buyId = document.getElementById(`order-buy-id-${symbol}`);
+                if (buyPrice && strat.breakout_high) buyPrice.textContent = formatPrice(strat.breakout_high, symbol);
+                if (buyId && strat.long_order_id) buyId.textContent = `#${strat.long_order_id}`;
+
+                // Sell order
+                const sellPrice = document.getElementById(`order-sell-price-${symbol}`);
+                const sellId = document.getElementById(`order-sell-id-${symbol}`);
+                if (sellPrice && strat.breakout_low) sellPrice.textContent = formatPrice(strat.breakout_low, symbol);
+                if (sellId && strat.short_order_id) sellId.textContent = `#${strat.short_order_id}`;
+
+                // Countdown timer (30 min = 1800s from placement)
+                const timerEl = document.getElementById(`order-timer-${symbol}`);
+                if (timerEl) {
+                    // We track locally when we first saw orders_placed
+                    if (!window._orderStartTime) window._orderStartTime = {};
+                    if (!window._orderStartTime[symbol]) {
+                        window._orderStartTime[symbol] = Date.now();
+                    }
+                    const elapsedMs = Date.now() - window._orderStartTime[symbol];
+                    const remainingSec = Math.max(0, 1800 - Math.floor(elapsedMs / 1000));
+                    const mins = Math.floor(remainingSec / 60);
+                    const secs = remainingSec % 60;
+                    timerEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+                    // Change color when running low
+                    if (remainingSec < 120) {
+                        timerEl.style.color = 'var(--red)';
+                    } else if (remainingSec < 600) {
+                        timerEl.style.color = 'var(--amber)';
+                    }
+                }
+            }
+        } else {
+            // No trade, no orders
+            if (tradePanel) tradePanel.style.display = 'none';
+            if (orderPanel) orderPanel.style.display = 'none';
+            // Reset timer tracking
+            if (window._orderStartTime && window._orderStartTime[symbol]) {
+                delete window._orderStartTime[symbol];
             }
         }
     });
