@@ -1,12 +1,14 @@
 """
-Trend Hunter Strategy — 15-minute candle breakout with confirmation.
+Trend Hunter Strategy — Limit orders at breakout levels.
 
 Strategy:
   1. Calculate breakout range from N recent candles (high/low)
-  2. Wait for a CONFIRMATION candle that closes above/below the range
-  3. Enter market order with bracket (SL + TP at 1:1 risk-reward)
-  4. Only 1 trade at a time — wait for exit before next entry
+  2. Place limit BUY at breakout_high and limit SELL at breakout_low
+  3. When one fills → cancel the other → attach bracket SL/TP (1:1 RR)
+  4. If not filled in 30 min → cancel and recalculate
+  5. Only 1 trade at a time
 """
+import time
 import logging
 from typing import Optional, List, Dict
 
@@ -14,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class TrendHunterStrategy:
-    """15-minute candle breakout strategy with confirmation + 1:1 RR."""
+    """Limit order breakout strategy with 1:1 RR bracket orders."""
 
     def __init__(self, symbol: str, quantity: int = 10,
                  breakout_buffer_pct: float = 0.1):
@@ -35,19 +37,23 @@ class TrendHunterStrategy:
         self._breakout_low: Optional[float] = None
         self._levels_set: bool = False
 
+        # Limit order tracking
+        self._long_order_id: Optional[int] = None   # Limit buy at breakout_high
+        self._short_order_id: Optional[int] = None   # Limit sell at breakout_low
+        self._orders_placed: bool = False
+        self._orders_placed_time: float = 0  # Unix timestamp
+        self._order_expiry_seconds: int = 1800  # 30 minutes
+
         # Trade state — 1 trade at a time
         self._in_trade: bool = False
-        self._trade_direction: Optional[str] = None  # "LONG" or "SHORT"
+        self._trade_direction: Optional[str] = None
         self._entry_price: Optional[float] = None
         self._stop_loss: Optional[float] = None
         self._take_profit: Optional[float] = None
         self._bracket_placed: bool = False
 
     def update_levels_from_candles(self, candles: List[Dict]) -> bool:
-        """
-        Calculate breakout levels from recent candles.
-        Returns True if levels were successfully set.
-        """
+        """Calculate breakout levels from recent candles."""
         if not candles or len(candles) < 2:
             return False
 
@@ -74,84 +80,67 @@ class TrendHunterStrategy:
 
         return True
 
-    def check_confirmation_candle(self, candles: List[Dict]) -> Optional[str]:
-        """
-        Check if the most recent COMPLETED candle confirms a breakout.
-
-        A confirmation candle is one whose CLOSE is:
-          - Above breakout_high → LONG signal
-          - Below breakout_low  → SHORT signal
-
-        We use candles[1] (second most recent) as the latest COMPLETED candle,
-        since candles[0] is typically still forming.
-
-        Returns: "LONG", "SHORT", or None
-        """
-        if not self._levels_set or not candles or len(candles) < 2:
-            return None
-
+    def needs_new_orders(self) -> bool:
+        """Check if we need to place new limit orders."""
         if self._in_trade:
-            return None  # Already in a trade, skip
+            return False  # Already in a trade
+        if not self._levels_set:
+            return False
+        if not self._orders_placed:
+            return True  # No orders placed yet
+        return False
 
-        # Use the most recent COMPLETED candle (index 1 = previous completed)
-        confirm_candle = candles[1]
-        candle_close = float(confirm_candle["close"])
-        candle_high = float(confirm_candle["high"])
-        candle_low = float(confirm_candle["low"])
-
-        # LONG confirmation: candle closed above breakout high
-        if candle_close >= self._breakout_high:
-            logger.info(
-                f"[{self.symbol}] LONG CONFIRMATION | Candle closed at "
-                f"${candle_close:,.2f} >= breakout ${self._breakout_high:,.2f}"
-            )
-            return "LONG"
-
-        # SHORT confirmation: candle closed below breakout low
-        if candle_close <= self._breakout_low:
-            logger.info(
-                f"[{self.symbol}] SHORT CONFIRMATION | Candle closed at "
-                f"${candle_close:,.2f} <= breakout ${self._breakout_low:,.2f}"
-            )
-            return "SHORT"
-
-        return None
+    def are_orders_expired(self) -> bool:
+        """Check if existing orders have been waiting too long (30 min)."""
+        if not self._orders_placed:
+            return False
+        elapsed = time.time() - self._orders_placed_time
+        return elapsed >= self._order_expiry_seconds
 
     def calculate_sl_tp(self, entry_price: float, direction: str) -> Dict[str, float]:
         """
-        Calculate Stop Loss and Take Profit for 1:1 risk-reward.
-
-        Uses half the candle range spread as the SL/TP distance.
-
-        For LONG:
-          SL = entry - half_spread
-          TP = entry + half_spread
-
-        For SHORT:
-          SL = entry + half_spread
-          TP = entry - half_spread
+        Calculate SL/TP for 1:1 risk-reward.
+        Uses half the candle range spread as distance.
         """
         spread = self.range_high - self.range_low
         half_spread = spread / 2
 
-        # Minimum distance to prevent too-tight SL/TP
-        min_distance = entry_price * 0.001  # 0.1% minimum
+        # Minimum distance (0.1% of entry)
+        min_distance = entry_price * 0.001
         half_spread = max(half_spread, min_distance)
 
         if direction == "LONG":
             sl = round(entry_price - half_spread, 2)
             tp = round(entry_price + half_spread, 2)
-        else:  # SHORT
+        else:
             sl = round(entry_price + half_spread, 2)
             tp = round(entry_price - half_spread, 2)
 
         logger.info(
             f"[{self.symbol}] {direction} | Entry: ${entry_price:,.2f} | "
-            f"SL: ${sl:,.2f} | TP: ${tp:,.2f} | "
-            f"Risk: ${half_spread:,.2f} | RR: 1:1"
+            f"SL: ${sl:,.2f} | TP: ${tp:,.2f} | Risk: ${half_spread:,.2f} | RR: 1:1"
         )
 
         return {"stop_loss": sl, "take_profit": tp, "risk": half_spread}
+
+    def record_orders_placed(self, long_order_id: int = None, short_order_id: int = None):
+        """Record that limit orders have been placed."""
+        self._long_order_id = long_order_id
+        self._short_order_id = short_order_id
+        self._orders_placed = True
+        self._orders_placed_time = time.time()
+        logger.info(
+            f"[{self.symbol}] Limit orders placed | "
+            f"BUY #{long_order_id} @ ${self._breakout_high:,.2f} | "
+            f"SELL #{short_order_id} @ ${self._breakout_low:,.2f}"
+        )
+
+    def clear_orders(self):
+        """Clear order tracking (after cancel or fill)."""
+        self._long_order_id = None
+        self._short_order_id = None
+        self._orders_placed = False
+        self._orders_placed_time = 0
 
     def enter_trade(self, direction: str, entry_price: float,
                     stop_loss: float, take_profit: float):
@@ -163,6 +152,7 @@ class TrendHunterStrategy:
         self._take_profit = take_profit
         self._bracket_placed = True
         self.current_position = direction
+        self.clear_orders()  # No more pending orders
 
     def exit_trade(self):
         """Reset trade state after SL/TP exit."""
@@ -175,11 +165,10 @@ class TrendHunterStrategy:
         self.current_position = None
 
     def is_in_trade(self) -> bool:
-        """Check if currently in an active trade."""
         return self._in_trade
 
     def get_status(self) -> dict:
-        """Get current strategy status for dashboard display."""
+        """Get current strategy status for dashboard."""
         return {
             "symbol": self.symbol,
             "enabled": self.enabled,
@@ -197,4 +186,7 @@ class TrendHunterStrategy:
             "entry_price": self._entry_price,
             "stop_loss": self._stop_loss,
             "take_profit": self._take_profit,
+            "orders_placed": self._orders_placed,
+            "long_order_id": self._long_order_id,
+            "short_order_id": self._short_order_id,
         }

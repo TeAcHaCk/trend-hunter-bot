@@ -3,6 +3,7 @@ Bot Runner — APScheduler-based execution loop for the Trend Hunter strategy.
 """
 import logging
 import asyncio
+import time
 from datetime import datetime
 from typing import Dict, Optional
 
@@ -100,10 +101,11 @@ class BotRunner:
         Main strategy loop — runs every 10 seconds.
 
         Flow:
-          1. Fetch candles only when a NEW candle forms (~every 15 min)
-          2. Lock breakout levels until next candle refresh
-          3. Check confirmation every 10 seconds using cached levels
-          4. If confirmed → enter market order + bracket (SL + TP)
+          1. Refresh candle data → compute breakout levels
+          2. If no orders placed → place limit BUY at high + SELL at low
+          3. If orders placed → check if filled or expired (30 min)
+          4. If filled → cancel other order → place bracket SL/TP
+          5. If expired → cancel orders → recalculate levels → repeat
         """
         if self.state != "RUNNING":
             return
@@ -115,10 +117,43 @@ class BotRunner:
                 continue
 
             try:
-                # 1. Refresh candles if needed (first run or new candle formed)
+                # ── IN TRADE → monitor position (needs price first) ──
+                if strategy.is_in_trade():
+                    price_data = delta_ws.get_price(symbol)
+                    if price_data:
+                        current_price = float(price_data.get("close") or price_data.get("mark_price", 0))
+                    elif symbol in self._cached_candles and self._cached_candles[symbol]:
+                        current_price = float(self._cached_candles[symbol][0]["close"])
+                    else:
+                        current_price = 0
+                    if current_price:
+                        strategy.last_price = current_price
+                        await self._monitor_position(symbol, strategy, current_price)
+                    continue
+
+                # ── ORDERS PLACED → check fill / expiry ──
+                if strategy._orders_placed:
+                    price_data = delta_ws.get_price(symbol)
+                    if price_data:
+                        current_price = float(price_data.get("close") or price_data.get("mark_price", 0))
+                    elif symbol in self._cached_candles and self._cached_candles[symbol]:
+                        current_price = float(self._cached_candles[symbol][0]["close"])
+                    else:
+                        current_price = 0
+                    if current_price:
+                        strategy.last_price = current_price
+                    await self._check_order_status(symbol, strategy, current_price or 0)
+                    continue
+
+                # ── NO ORDERS → refresh levels + place new orders ──
+                # Safety checks
+                if not self.position_manager._check_daily_loss():
+                    continue
+
+                # ALWAYS refresh candle levels first (this also provides price)
                 await self._refresh_candles_if_needed(symbol, strategy)
 
-                # 2. Get current price
+                # Get current price (from WebSocket or cached candles)
                 price_data = delta_ws.get_price(symbol)
                 if price_data:
                     current_price = float(price_data.get("close") or price_data.get("mark_price", 0))
@@ -128,58 +163,23 @@ class BotRunner:
                     current_price = 0
 
                 if not current_price:
-                    logger.warning(f"[{symbol}] No price available")
+                    logger.warning(f"[{symbol}] No price available after candle refresh")
                     continue
 
                 strategy.last_price = current_price
 
-                # 3. If levels not set yet, skip
                 if not strategy._levels_set:
                     logger.warning(f"[{symbol}] Levels not set yet")
                     continue
 
-                # 4. If already in a trade — monitor position
-                if strategy.is_in_trade():
-                    await self._monitor_position(symbol, strategy, current_price)
-                    continue
-
-                # 5. Safety checks
-                if not self.position_manager._check_daily_loss():
-                    continue
-                if not self.position_manager._check_cooldown(symbol):
-                    continue
-
-                # 6. Check for confirmation candle (uses cached candles)
-                candles = self._cached_candles.get(symbol, [])
-                if not candles or len(candles) < 3:
-                    continue
-
-                signal = strategy.check_confirmation_candle(candles)
-                if not signal:
-                    dist_high = strategy._breakout_high - current_price if strategy._breakout_high else 0
-                    dist_low = current_price - strategy._breakout_low if strategy._breakout_low else 0
-                    logger.info(
-                        f"[{symbol}] ${current_price:,.2f} | "
-                        f"Waiting | UP ${strategy._breakout_high:,.2f} (${dist_high:,.2f}) / "
-                        f"DOWN ${strategy._breakout_low:,.2f} (${dist_low:,.2f})"
-                    )
-                    continue
-
-                # 7. SIGNAL CONFIRMED — Execute trade
-                self.total_signals += 1
-                logger.info(f"[{symbol}] CONFIRMED {signal} BREAKOUT!")
-
-                await self._execute_entry(symbol, strategy, signal, current_price)
+                # Place limit orders at breakout levels
+                await self._place_breakout_orders(symbol, strategy, current_price)
 
             except Exception as e:
                 logger.error(f"[{symbol}] Strategy check error: {e}", exc_info=True)
 
     async def _refresh_candles_if_needed(self, symbol: str, strategy: TrendHunterStrategy):
-        """
-        Fetch new candles only when a new candle has formed.
-        For 15m candles, this means ~every 15 minutes.
-        Keeps breakout levels LOCKED between refreshes.
-        """
+        """Fetch new candles when a new candle has formed."""
         import time as _time
 
         resolution_seconds = {
@@ -190,23 +190,21 @@ class BotRunner:
         now = int(_time.time())
         last_fetch_time = self._last_candle_time.get(symbol, 0)
 
-        # Only refresh if enough time has passed for a new candle to form
+        # Only refresh if enough time has passed for a new candle
         if last_fetch_time > 0 and (now - last_fetch_time) < interval:
-            return  # Levels are locked, no refresh needed
+            return
 
-        # Fetch new candles
         candles = self.delta_client.get_candles(
             symbol=symbol,
             resolution=self.candle_resolution,
             num_candles=self.lookback_candles,
         )
 
-        if not candles or len(candles) < 3:
+        if not candles or len(candles) < 2:
             return
 
         newest_time = int(candles[0].get("time", 0))
 
-        # Only update levels if we actually got a NEW candle
         if newest_time != last_fetch_time:
             self._cached_candles[symbol] = candles
             self._last_candle_time[symbol] = newest_time
@@ -216,76 +214,200 @@ class BotRunner:
                 f"Locked for next {self.candle_resolution}"
             )
         else:
-            # Same candle — just update the cache timestamp to prevent re-fetching
             self._last_candle_time[symbol] = now
 
-    async def _execute_entry(self, symbol: str, strategy: TrendHunterStrategy,
-                             signal: str, current_price: float):
-        """Execute a market entry order and attach bracket (SL + TP)."""
+    async def _place_breakout_orders(self, symbol: str,
+                                     strategy: TrendHunterStrategy,
+                                     current_price: float):
+        """Place limit BUY at breakout_high and limit SELL at breakout_low."""
         product_id = self.position_manager.get_product_id(symbol)
         if not product_id:
             logger.error(f"[{symbol}] Cannot resolve product ID")
             return
 
-        # Calculate SL/TP at 1:1 RR
-        levels = strategy.calculate_sl_tp(current_price, signal)
-        sl_price = levels["stop_loss"]
-        tp_price = levels["take_profit"]
+        high = strategy._breakout_high
+        low = strategy._breakout_low
 
-        # Place market entry order
-        side = "buy" if signal == "LONG" else "sell"
-        order_result = self.delta_client.place_order(
-            product_id=product_id,
-            product_symbol=symbol,
-            side=side,
-            size=strategy.quantity,
-            order_type="market_order",
-        )
-
-        if not order_result.get("success") and not order_result.get("result"):
-            logger.error(f"[{symbol}] Entry order FAILED: {order_result}")
+        if not high or not low:
             return
 
-        logger.info(f"[{symbol}] ENTERED {signal} @ ~${current_price:,.2f}")
-
-        # Place bracket order (SL + TP) on the position
-        bracket_result = self.delta_client.place_bracket_order(
-            product_id=product_id,
-            stop_loss_price=sl_price,
-            take_profit_price=tp_price,
+        logger.info(
+            f"[{symbol}] PLACING LIMIT ORDERS | "
+            f"BUY @ ${high:,.2f} | SELL @ ${low:,.2f} | "
+            f"Current: ${current_price:,.2f}"
         )
 
-        if bracket_result.get("success") or bracket_result.get("result"):
-            logger.info(
-                f"[{symbol}] Bracket placed | SL: ${sl_price:,.2f} | TP: ${tp_price:,.2f}"
-            )
+        # Place limit BUY at breakout high
+        long_result = self.delta_client.place_order(
+            product_id=product_id,
+            product_symbol=symbol,
+            side="buy",
+            size=strategy.quantity,
+            order_type="limit_order",
+            limit_price=str(round(high, 2)),
+        )
+
+        long_order_id = None
+        if long_result.get("result"):
+            long_order_id = long_result["result"].get("id")
+            logger.info(f"[{symbol}] Limit BUY placed #{long_order_id} @ ${high:,.2f}")
         else:
-            logger.warning(f"[{symbol}] Bracket order failed: {bracket_result}")
+            logger.error(f"[{symbol}] Limit BUY FAILED: {long_result}")
 
-        # Record trade state
-        strategy.enter_trade(signal, current_price, sl_price, tp_price)
-        self.position_manager._positions[symbol] = {
-            "side": signal,
-            "size": strategy.quantity,
-            "entry_price": current_price,
-            "product_id": product_id,
-        }
-        self.position_manager._last_trade_time[symbol] = datetime.utcnow()
-        self.total_trades += 1
+        # Place limit SELL at breakout low
+        short_result = self.delta_client.place_order(
+            product_id=product_id,
+            product_symbol=symbol,
+            side="sell",
+            size=strategy.quantity,
+            order_type="limit_order",
+            limit_price=str(round(low, 2)),
+        )
 
-        # Log to database
-        await self._log_trade({
-            "symbol": symbol,
-            "signal": signal,
-            "quantity": strategy.quantity,
-            "entry_price": current_price,
-            "stop_loss": sl_price,
-            "take_profit": tp_price,
-            "risk": levels["risk"],
-            "timestamp": datetime.utcnow().isoformat(),
-            "actions": [f"Market {signal}", f"SL: {sl_price}", f"TP: {tp_price}"],
-            "success": True,
-        })
+        short_order_id = None
+        if short_result.get("result"):
+            short_order_id = short_result["result"].get("id")
+            logger.info(f"[{symbol}] Limit SELL placed #{short_order_id} @ ${low:,.2f}")
+        else:
+            logger.error(f"[{symbol}] Limit SELL FAILED: {short_result}")
+
+        # Track the orders
+        if long_order_id or short_order_id:
+            strategy.record_orders_placed(long_order_id, short_order_id)
+            self.total_signals += 1
+        else:
+            logger.error(f"[{symbol}] Both limit orders failed — will retry next cycle")
+
+    async def _check_order_status(self, symbol: str,
+                                  strategy: TrendHunterStrategy,
+                                  current_price: float):
+        """Check if limit orders have been filled or need cancellation."""
+        product_id = self.position_manager.get_product_id(symbol)
+        if not product_id:
+            return
+
+        # Check for expiry first (30 min)
+        if strategy.are_orders_expired():
+            logger.info(
+                f"[{symbol}] Orders EXPIRED after 30min — cancelling and recalculating"
+            )
+            await self._cancel_pending_orders(symbol, strategy, product_id)
+            # Force level refresh on next cycle
+            self._last_candle_time[symbol] = 0
+            return
+
+        # Check actual position on exchange to detect fill
+        pos_data = self.delta_client.get_position(product_id)
+        position_result = pos_data.get("result", {})
+        actual_size = int(position_result.get("size", 0)) if position_result else 0
+
+        if actual_size != 0:
+            # A limit order was filled! Determine direction
+            entry_price_str = position_result.get("entry_price", "0")
+            entry_price = float(entry_price_str) if entry_price_str else current_price
+
+            if actual_size > 0:
+                direction = "LONG"
+                filled_order_id = strategy._long_order_id
+                other_order_id = strategy._short_order_id
+            else:
+                direction = "SHORT"
+                filled_order_id = strategy._short_order_id
+                other_order_id = strategy._long_order_id
+
+            logger.info(
+                f"[{symbol}] ✅ LIMIT ORDER FILLED! {direction} @ ${entry_price:,.2f} | "
+                f"Order #{filled_order_id}"
+            )
+
+            # Cancel the other pending limit order
+            if other_order_id:
+                try:
+                    self.delta_client.cancel_order(other_order_id, product_id)
+                    logger.info(f"[{symbol}] Cancelled opposite order #{other_order_id}")
+                except Exception as e:
+                    logger.warning(f"[{symbol}] Failed to cancel opposite: {e}")
+
+            # Calculate SL/TP at 1:1 RR
+            levels = strategy.calculate_sl_tp(entry_price, direction)
+            sl_price = levels["stop_loss"]
+            tp_price = levels["take_profit"]
+
+            # Place bracket order (SL + TP) on the position
+            bracket_result = self.delta_client.place_bracket_order(
+                product_id=product_id,
+                stop_loss_price=sl_price,
+                take_profit_price=tp_price,
+            )
+
+            if bracket_result.get("success") or bracket_result.get("result"):
+                logger.info(
+                    f"[{symbol}] Bracket placed | SL: ${sl_price:,.2f} | TP: ${tp_price:,.2f}"
+                )
+            else:
+                logger.warning(f"[{symbol}] Bracket order failed: {bracket_result}")
+
+            # Record trade state
+            strategy.enter_trade(direction, entry_price, sl_price, tp_price)
+            self.position_manager._positions[symbol] = {
+                "side": direction,
+                "size": abs(actual_size),
+                "entry_price": entry_price,
+                "product_id": product_id,
+            }
+            self.position_manager._last_trade_time[symbol] = datetime.utcnow()
+            self.total_trades += 1
+
+            # Log to database
+            await self._log_trade({
+                "symbol": symbol,
+                "signal": direction,
+                "quantity": abs(actual_size),
+                "entry_price": entry_price,
+                "stop_loss": sl_price,
+                "take_profit": tp_price,
+                "risk": levels["risk"],
+                "timestamp": datetime.utcnow().isoformat(),
+                "actions": [f"Limit {direction}", f"SL: {sl_price}", f"TP: {tp_price}"],
+                "success": True,
+            })
+            return
+
+        # No fill yet — log waiting status
+        elapsed = int(time.time() - strategy._orders_placed_time)
+        remaining = max(0, strategy._order_expiry_seconds - elapsed)
+        dist_high = strategy._breakout_high - current_price if strategy._breakout_high else 0
+        dist_low = current_price - strategy._breakout_low if strategy._breakout_low else 0
+        logger.info(
+            f"[{symbol}] ${current_price:,.2f} | "
+            f"ORDERS PENDING ({remaining}s left) | "
+            f"BUY @ ${strategy._breakout_high:,.2f} (${dist_high:,.2f}) | "
+            f"SELL @ ${strategy._breakout_low:,.2f} (${dist_low:,.2f})"
+        )
+
+    async def _cancel_pending_orders(self, symbol: str,
+                                     strategy: TrendHunterStrategy,
+                                     product_id: int):
+        """Cancel all pending limit orders for a symbol."""
+        cancelled = 0
+        for order_id in [strategy._long_order_id, strategy._short_order_id]:
+            if order_id:
+                try:
+                    self.delta_client.cancel_order(order_id, product_id)
+                    cancelled += 1
+                    logger.info(f"[{symbol}] Cancelled order #{order_id}")
+                except Exception as e:
+                    logger.warning(f"[{symbol}] Failed to cancel #{order_id}: {e}")
+
+        if cancelled == 0:
+            # Fallback: cancel all orders for this product
+            try:
+                self.delta_client.cancel_all_orders(product_id)
+                logger.info(f"[{symbol}] Cancelled all orders for product {product_id}")
+            except Exception as e:
+                logger.warning(f"[{symbol}] cancel_all failed: {e}")
+
+        strategy.clear_orders()
 
     async def _monitor_position(self, symbol: str, strategy: TrendHunterStrategy,
                                 current_price: float):
@@ -294,11 +416,8 @@ class BotRunner:
         if not product_id:
             return
 
-        # Check actual position on exchange
         pos_data = self.delta_client.get_position(product_id)
         position_result = pos_data.get("result", {})
-
-        # Get position size — if 0, position was closed (SL or TP hit)
         actual_size = int(position_result.get("size", 0)) if position_result else 0
 
         if actual_size == 0:
@@ -322,6 +441,9 @@ class BotRunner:
                 del self.position_manager._positions[symbol]
 
             strategy.exit_trade()
+
+            # Force level refresh for next trade
+            self._last_candle_time[symbol] = 0
             return
 
         # Position still open — log status
@@ -354,7 +476,6 @@ class BotRunner:
                     notes=str(trade_result.get("actions", [])),
                 )
 
-                # If this was a reversal, also log the close
                 if "close_pnl" in trade_result:
                     trade.notes += f" | Close PnL: {trade_result['close_pnl']:.2f}"
 
