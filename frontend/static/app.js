@@ -28,6 +28,12 @@ let ws = null;
 let reconnectTimer = null;
 let statusPollTimer = null;
 
+// Chart state
+let klineChart = null;
+let currentChartSymbol = 'BTCUSD';
+let currentTimeframe = '5m';
+let chartRefreshTimer = null;
+
 // ═══════════════════════════════════════════════════════
 // API HELPERS
 // ═══════════════════════════════════════════════════════
@@ -253,10 +259,55 @@ function updateStrategiesUI() {
                     : '';
         }
 
+        // Breakout levels
         const bufHigh = document.getElementById(`buf-high-${symbol}`);
         const bufLow = document.getElementById(`buf-low-${symbol}`);
         if (bufHigh && strat.breakout_high) bufHigh.textContent = formatPrice(strat.breakout_high, symbol);
         if (bufLow && strat.breakout_low) bufLow.textContent = formatPrice(strat.breakout_low, symbol);
+
+        // Range high/low on bar
+        const highEl = document.getElementById(`high-${symbol}`);
+        const lowEl = document.getElementById(`low-${symbol}`);
+        if (highEl && strat.range_high) highEl.textContent = formatPrice(strat.range_high, symbol);
+        if (lowEl && strat.range_low) lowEl.textContent = formatPrice(strat.range_low, symbol);
+
+        // Update breakout bar with strategy range
+        const price = strat.last_price || 0;
+        if (price && strat.range_low && strat.range_high) {
+            updateBreakoutBar(symbol, price, strat.range_low, strat.range_high);
+        }
+
+        // Trade status panel
+        const tradePanel = document.getElementById(`trade-status-${symbol}`);
+        if (tradePanel) {
+            if (strat.in_trade) {
+                tradePanel.style.display = 'block';
+                const dirEl = document.getElementById(`trade-dir-${symbol}`);
+                if (dirEl) {
+                    dirEl.textContent = `${strat.trade_direction === 'LONG' ? '↑' : '↓'} ${strat.trade_direction}`;
+                    dirEl.className = `trade-direction ${(strat.trade_direction || '').toLowerCase()}`;
+                }
+                const slEl = document.getElementById(`trade-sl-${symbol}`);
+                const tpEl = document.getElementById(`trade-tp-${symbol}`);
+                const entryEl = document.getElementById(`trade-entry-${symbol}`);
+                if (slEl && strat.stop_loss) slEl.textContent = formatPrice(strat.stop_loss, symbol);
+                if (tpEl && strat.take_profit) tpEl.textContent = formatPrice(strat.take_profit, symbol);
+                if (entryEl && strat.entry_price) entryEl.textContent = formatPrice(strat.entry_price, symbol);
+
+                // Unrealized PnL
+                const pnlEl = document.getElementById(`trade-pnl-${symbol}`);
+                if (pnlEl && strat.entry_price && price) {
+                    let pnl = 0;
+                    if (strat.trade_direction === 'LONG') pnl = price - strat.entry_price;
+                    else pnl = strat.entry_price - price;
+                    pnl *= (strat.quantity || 1);
+                    pnlEl.textContent = `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`;
+                    pnlEl.style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+                }
+            } else {
+                tradePanel.style.display = 'none';
+            }
+        }
     });
 }
 
@@ -691,6 +742,160 @@ function getCheckVal(id) {
 // INITIALIZATION
 // ═══════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════
+// KLINECHART
+// ═══════════════════════════════════════════════════════
+
+function initChart() {
+    const container = document.getElementById('kline-chart');
+    if (!container || typeof klinecharts === 'undefined') return;
+
+    klineChart = klinecharts.init('kline-chart', {
+        styles: {
+            grid: {
+                show: true,
+                horizontal: { color: 'rgba(56, 68, 100, 0.15)' },
+                vertical: { color: 'rgba(56, 68, 100, 0.15)' },
+            },
+            candle: {
+                type: 'candle_solid',
+                priceMark: { show: true, high: { show: true }, low: { show: true }, last: { show: true } },
+                bar: {
+                    upColor: '#10b981',
+                    downColor: '#ef4444',
+                    upBorderColor: '#10b981',
+                    downBorderColor: '#ef4444',
+                    upWickColor: '#10b981',
+                    downWickColor: '#ef4444',
+                },
+            },
+            indicator: {
+                ohlc: { upColor: '#10b981', downColor: '#ef4444' },
+            },
+            xAxis: {
+                axisLine: { color: 'rgba(56, 68, 100, 0.3)' },
+                tickText: { color: '#8b949e' },
+            },
+            yAxis: {
+                axisLine: { color: 'rgba(56, 68, 100, 0.3)' },
+                tickText: { color: '#8b949e' },
+            },
+            separator: { color: 'rgba(56, 68, 100, 0.2)' },
+            crosshair: {
+                show: true,
+                horizontal: { line: { color: 'rgba(0, 212, 255, 0.3)' } },
+                vertical: { line: { color: 'rgba(0, 212, 255, 0.3)' } },
+            },
+        },
+    });
+
+    loadChartData();
+
+    // Auto-refresh chart
+    chartRefreshTimer = setInterval(loadChartData, 30000);
+}
+
+async function loadChartData() {
+    if (!klineChart) return;
+
+    try {
+        const result = await apiGet(`/api/candles/${currentChartSymbol}?resolution=${currentTimeframe}&count=100`);
+        if (result.success && result.result && result.result.length > 0) {
+            klineChart.applyNewData(result.result);
+
+            // Add breakout level overlays
+            const strat = state.strategies[currentChartSymbol];
+            if (strat) {
+                updateChartOverlays(strat);
+            }
+        }
+    } catch (e) {
+        console.error('Chart data error:', e);
+    }
+}
+
+function updateChartOverlays(strat) {
+    if (!klineChart) return;
+
+    // Remove old overlays
+    klineChart.removeOverlay();
+
+    // Add breakout high line
+    if (strat.breakout_high) {
+        klineChart.createOverlay({
+            name: 'horizontalStraightLine',
+            points: [{ value: strat.breakout_high }],
+            styles: {
+                line: { color: '#10b981', size: 1, style: 'dashed' },
+            },
+            lock: true,
+        });
+    }
+
+    // Add breakout low line
+    if (strat.breakout_low) {
+        klineChart.createOverlay({
+            name: 'horizontalStraightLine',
+            points: [{ value: strat.breakout_low }],
+            styles: {
+                line: { color: '#ef4444', size: 1, style: 'dashed' },
+            },
+            lock: true,
+        });
+    }
+
+    // Add SL/TP if in trade
+    if (strat.in_trade) {
+        if (strat.stop_loss) {
+            klineChart.createOverlay({
+                name: 'horizontalStraightLine',
+                points: [{ value: strat.stop_loss }],
+                styles: { line: { color: '#ef4444', size: 2, style: 'solid' } },
+                lock: true,
+            });
+        }
+        if (strat.take_profit) {
+            klineChart.createOverlay({
+                name: 'horizontalStraightLine',
+                points: [{ value: strat.take_profit }],
+                styles: { line: { color: '#10b981', size: 2, style: 'solid' } },
+                lock: true,
+            });
+        }
+        if (strat.entry_price) {
+            klineChart.createOverlay({
+                name: 'horizontalStraightLine',
+                points: [{ value: strat.entry_price }],
+                styles: { line: { color: '#00d4ff', size: 1, style: 'solid' } },
+                lock: true,
+            });
+        }
+    }
+}
+
+function switchChart(symbol) {
+    currentChartSymbol = symbol;
+
+    // Update tab active state
+    document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+    const tab = document.getElementById(`tab-${symbol}`);
+    if (tab) tab.classList.add('active');
+
+    loadChartData();
+}
+
+function changeTimeframe(tf) {
+    currentTimeframe = tf;
+
+    // Update button active state
+    document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById(`tf-${tf}`);
+    if (btn) btn.classList.add('active');
+
+    loadChartData();
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
     // Determine which page we're on
     const path = window.location.pathname;
@@ -700,6 +905,7 @@ document.addEventListener('DOMContentLoaded', () => {
         connectWebSocket();
         startPolling();
         pollStatus(); // Immediate first fetch
+        initChart();  // Initialize KLineChart
     } else if (path === '/settings' || path === '/settings.html') {
         // Settings
         loadSettings();

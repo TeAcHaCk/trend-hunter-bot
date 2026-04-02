@@ -39,6 +39,10 @@ class BotRunner:
         self.total_signals: int = 0
         self.total_trades: int = 0
 
+        # Candle cache — only re-fetch when a new candle forms
+        self._cached_candles: Dict[str, list] = {}
+        self._last_candle_time: Dict[str, int] = {}  # timestamp of newest candle per symbol
+
     def initialize(self, bot_settings: Dict = None):
         """Initialize strategies with settings."""
         s = bot_settings or settings.DEFAULT_SETTINGS
@@ -96,9 +100,9 @@ class BotRunner:
         Main strategy loop — runs every 10 seconds.
 
         Flow:
-          1. Fetch candles → update breakout range
-          2. Check if currently in a trade → if so, monitor position
-          3. If no trade → check for confirmation candle
+          1. Fetch candles only when a NEW candle forms (~every 15 min)
+          2. Lock breakout levels until next candle refresh
+          3. Check confirmation every 10 seconds using cached levels
           4. If confirmed → enter market order + bracket (SL + TP)
         """
         if self.state != "RUNNING":
@@ -111,58 +115,67 @@ class BotRunner:
                 continue
 
             try:
-                # 1. Fetch recent candles
-                candles = self.delta_client.get_candles(
-                    symbol=symbol,
-                    resolution=self.candle_resolution,
-                    num_candles=self.lookback_candles,
-                )
-
-                if not candles or len(candles) < 3:
-                    logger.warning(f"[{symbol}] Not enough candles (got {len(candles) if candles else 0})")
-                    continue
-
-                # Get current price
+                # 1. Get current price (fast — from WebSocket or latest cached candle)
                 price_data = delta_ws.get_price(symbol)
                 if price_data:
                     current_price = float(price_data.get("close") or price_data.get("mark_price", 0))
+                elif symbol in self._cached_candles and self._cached_candles[symbol]:
+                    current_price = float(self._cached_candles[symbol][0]["close"])
                 else:
-                    current_price = float(candles[0]["close"])
+                    current_price = 0
 
                 if not current_price:
-                    continue
+                    # No price yet — need initial candle fetch
+                    candles = self.delta_client.get_candles(
+                        symbol=symbol,
+                        resolution=self.candle_resolution,
+                        num_candles=self.lookback_candles,
+                    )
+                    if candles:
+                        self._cached_candles[symbol] = candles
+                        self._last_candle_time[symbol] = int(candles[0].get("time", 0))
+                        current_price = float(candles[0]["close"])
+                    if not current_price:
+                        continue
 
                 strategy.last_price = current_price
 
-                # 2. Update breakout levels from candles
-                strategy.update_levels_from_candles(candles)
+                # 2. Refresh candles only when a new candle has likely formed
+                #    Resolution determines refresh interval (15m = 900 seconds)
+                await self._refresh_candles_if_needed(symbol, strategy)
 
-                # 3. If already in a trade — check if position is still open
+                # 3. If levels not set yet, skip
+                if not strategy._levels_set:
+                    continue
+
+                # 4. If already in a trade — monitor position
                 if strategy.is_in_trade():
                     await self._monitor_position(symbol, strategy, current_price)
                     continue
 
-                # 4. Safety checks
+                # 5. Safety checks
                 if not self.position_manager._check_daily_loss():
                     continue
                 if not self.position_manager._check_cooldown(symbol):
                     continue
 
-                # 5. Check for confirmation candle
+                # 6. Check for confirmation candle (uses cached candles)
+                candles = self._cached_candles.get(symbol, [])
+                if not candles or len(candles) < 3:
+                    continue
+
                 signal = strategy.check_confirmation_candle(candles)
                 if not signal:
-                    # Log status
                     dist_high = strategy._breakout_high - current_price if strategy._breakout_high else 0
                     dist_low = current_price - strategy._breakout_low if strategy._breakout_low else 0
                     logger.info(
-                        f"[{symbol}] Price: ${current_price:,.2f} | "
-                        f"Waiting for confirmation | "
-                        f"UP ${strategy._breakout_high:,.2f} (${dist_high:,.2f}) / "
+                        f"[{symbol}] ${current_price:,.2f} | "
+                        f"Waiting | UP ${strategy._breakout_high:,.2f} (${dist_high:,.2f}) / "
                         f"DOWN ${strategy._breakout_low:,.2f} (${dist_low:,.2f})"
                     )
                     continue
 
-                # 6. SIGNAL CONFIRMED — Execute trade
+                # 7. SIGNAL CONFIRMED — Execute trade
                 self.total_signals += 1
                 logger.info(f"[{symbol}] CONFIRMED {signal} BREAKOUT!")
 
@@ -170,6 +183,51 @@ class BotRunner:
 
             except Exception as e:
                 logger.error(f"[{symbol}] Strategy check error: {e}", exc_info=True)
+
+    async def _refresh_candles_if_needed(self, symbol: str, strategy: TrendHunterStrategy):
+        """
+        Fetch new candles only when a new candle has formed.
+        For 15m candles, this means ~every 15 minutes.
+        Keeps breakout levels LOCKED between refreshes.
+        """
+        import time as _time
+
+        resolution_seconds = {
+            "1m": 60, "5m": 300, "15m": 900,
+            "30m": 1800, "1h": 3600, "1d": 86400,
+        }
+        interval = resolution_seconds.get(self.candle_resolution, 900)
+        now = int(_time.time())
+        last_fetch_time = self._last_candle_time.get(symbol, 0)
+
+        # Only refresh if enough time has passed for a new candle to form
+        if last_fetch_time > 0 and (now - last_fetch_time) < interval:
+            return  # Levels are locked, no refresh needed
+
+        # Fetch new candles
+        candles = self.delta_client.get_candles(
+            symbol=symbol,
+            resolution=self.candle_resolution,
+            num_candles=self.lookback_candles,
+        )
+
+        if not candles or len(candles) < 3:
+            return
+
+        newest_time = int(candles[0].get("time", 0))
+
+        # Only update levels if we actually got a NEW candle
+        if newest_time != last_fetch_time:
+            self._cached_candles[symbol] = candles
+            self._last_candle_time[symbol] = newest_time
+            strategy.update_levels_from_candles(candles)
+            logger.info(
+                f"[{symbol}] LEVELS REFRESHED | New candle at {newest_time} | "
+                f"Locked for next {self.candle_resolution}"
+            )
+        else:
+            # Same candle — just update the cache timestamp to prevent re-fetching
+            self._last_candle_time[symbol] = now
 
     async def _execute_entry(self, symbol: str, strategy: TrendHunterStrategy,
                              signal: str, current_price: float):

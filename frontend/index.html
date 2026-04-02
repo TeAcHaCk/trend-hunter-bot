@@ -7,6 +7,8 @@
     <title>Trend Hunter Bot — Dashboard</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+    <!-- KLineChart -->
+    <script src="https://cdn.jsdelivr.net/npm/klinecharts/dist/umd/klinecharts.min.js"></script>
 </head>
 <body>
 
@@ -50,7 +52,26 @@
         </div>
     </div>
 
-    <!-- ═══ Price Tickers ═══ -->
+    <!-- ═══ Chart Section ═══ -->
+    <div class="card" style="margin-bottom: var(--space-xl); padding: 0; overflow: hidden;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span class="card-title">📈 Live Chart</span>
+                <div class="chart-symbol-tabs">
+                    <button class="chart-tab active" id="tab-BTCUSD" onclick="switchChart('BTCUSD')">₿ BTC</button>
+                    <button class="chart-tab" id="tab-ETHUSD" onclick="switchChart('ETHUSD')">⟠ ETH</button>
+                </div>
+            </div>
+            <div style="display: flex; gap: 6px;">
+                <button class="tf-btn active" id="tf-5m" onclick="changeTimeframe('5m')">5m</button>
+                <button class="tf-btn" id="tf-15m" onclick="changeTimeframe('15m')">15m</button>
+                <button class="tf-btn" id="tf-1h" onclick="changeTimeframe('1h')">1h</button>
+            </div>
+        </div>
+        <div id="kline-chart" style="width: 100%; height: 420px;"></div>
+    </div>
+
+    <!-- ═══ Price Tickers with Breakout Levels ═══ -->
     <div class="grid-2" style="margin-bottom: var(--space-xl);">
 
         <!-- BTC Card -->
@@ -65,6 +86,7 @@
 
             <div id="price-BTCUSD" class="price-value">$—</div>
 
+            <!-- Breakout Range Bar -->
             <div class="breakout-bar-container" style="margin-top: 16px;">
                 <div id="fill-BTCUSD" class="breakout-bar-fill" style="width: 50%; background: var(--gradient-primary);"></div>
                 <div id="marker-BTCUSD" class="breakout-marker current" style="left: 50%;"></div>
@@ -85,9 +107,29 @@
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.72rem; color: var(--text-muted);">
-                <span>Breakout ↑ <span id="buf-high-BTCUSD">—</span></span>
-                <span>Breakout ↓ <span id="buf-low-BTCUSD">—</span></span>
+            <!-- Breakout Levels -->
+            <div class="level-grid">
+                <div class="level-item level-high">
+                    <span class="level-label">Breakout ↑</span>
+                    <span class="level-value" id="buf-high-BTCUSD">—</span>
+                </div>
+                <div class="level-item level-low">
+                    <span class="level-label">Breakout ↓</span>
+                    <span class="level-value" id="buf-low-BTCUSD">—</span>
+                </div>
+            </div>
+
+            <!-- Trade Status (shows when in trade) -->
+            <div id="trade-status-BTCUSD" class="trade-status" style="display: none;">
+                <div class="trade-header">
+                    <span id="trade-dir-BTCUSD" class="trade-direction">—</span>
+                    <span id="trade-pnl-BTCUSD" class="trade-pnl">—</span>
+                </div>
+                <div class="trade-levels">
+                    <div><span class="sl-label">SL</span> <span id="trade-sl-BTCUSD">—</span></div>
+                    <div><span class="entry-label">Entry</span> <span id="trade-entry-BTCUSD">—</span></div>
+                    <div><span class="tp-label">TP</span> <span id="trade-tp-BTCUSD">—</span></div>
+                </div>
             </div>
         </div>
 
@@ -123,9 +165,27 @@
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.72rem; color: var(--text-muted);">
-                <span>Breakout ↑ <span id="buf-high-ETHUSD">—</span></span>
-                <span>Breakout ↓ <span id="buf-low-ETHUSD">—</span></span>
+            <div class="level-grid">
+                <div class="level-item level-high">
+                    <span class="level-label">Breakout ↑</span>
+                    <span class="level-value" id="buf-high-ETHUSD">—</span>
+                </div>
+                <div class="level-item level-low">
+                    <span class="level-label">Breakout ↓</span>
+                    <span class="level-value" id="buf-low-ETHUSD">—</span>
+                </div>
+            </div>
+
+            <div id="trade-status-ETHUSD" class="trade-status" style="display: none;">
+                <div class="trade-header">
+                    <span id="trade-dir-ETHUSD" class="trade-direction">—</span>
+                    <span id="trade-pnl-ETHUSD" class="trade-pnl">—</span>
+                </div>
+                <div class="trade-levels">
+                    <div><span class="sl-label">SL</span> <span id="trade-sl-ETHUSD">—</span></div>
+                    <div><span class="entry-label">Entry</span> <span id="trade-entry-ETHUSD">—</span></div>
+                    <div><span class="tp-label">TP</span> <span id="trade-tp-ETHUSD">—</span></div>
+                </div>
             </div>
         </div>
     </div>
