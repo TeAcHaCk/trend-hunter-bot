@@ -290,6 +290,41 @@ class DeltaClient:
             reduce_only=True,
         )
 
+    def place_bracket_order(self, product_id: int,
+                            stop_loss_price: float,
+                            take_profit_price: float,
+                            trail_amount: Optional[float] = None) -> Dict:
+        """
+        Place a bracket order (SL + TP) on an existing position.
+        Uses OCO logic — when one triggers, the other cancels.
+
+        Args:
+            product_id: Product ID
+            stop_loss_price: Mark price to trigger stop loss
+            take_profit_price: Mark price to trigger take profit
+        """
+        payload = {
+            "product_id": product_id,
+            "bracket_stop_loss_price": str(stop_loss_price),
+            "bracket_take_profit_price": str(take_profit_price),
+        }
+        if trail_amount:
+            payload["bracket_trail_amount"] = str(trail_amount)
+
+        logger.info(
+            f"Placing bracket order | PID={product_id} | "
+            f"SL={stop_loss_price} | TP={take_profit_price}"
+        )
+        return self._request("POST", "/v2/orders/bracket", data=payload, auth=True)
+
+    def get_order_by_id(self, order_id: int) -> Dict:
+        """Get order details by ID."""
+        return self._request("GET", f"/v2/orders/{order_id}", auth=True)
+
+    def cancel_product_orders(self, product_id: int) -> Dict:
+        """Cancel all open orders for a specific product."""
+        return self.cancel_all_orders(product_id=product_id)
+
     def set_leverage(self, product_id: int, leverage: int) -> Dict:
         """Set leverage for a product."""
         payload = {

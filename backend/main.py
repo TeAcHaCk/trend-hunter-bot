@@ -128,24 +128,3 @@ async def health_check():
         "bot_state": bot_runner.state,
         "version": "1.0.0",
     }
-
-
-@app.get("/debug/modules")
-async def debug_modules():
-    """Debug: show loaded module paths."""
-    import inspect
-    from backend.strategy.trend_hunter import TrendHunterStrategy
-    from backend.scheduler import bot_runner as br_module
-    
-    strat_src = inspect.getsource(TrendHunterStrategy.get_status)
-    runner_src = inspect.getsource(br_module.BotRunner._run_strategy_check)
-    
-    return {
-        "trend_hunter_file": inspect.getfile(TrendHunterStrategy),
-        "bot_runner_file": inspect.getfile(br_module.BotRunner),
-        "get_status_has_range_high": "range_high" in strat_src,
-        "get_status_has_high_24h": "high_24h" in strat_src,
-        "strategy_check_has_get_candles": "get_candles" in runner_src,
-        "strategy_check_has_strategy_debug": "strategy_debug" in runner_src,
-        "cwd": os.getcwd(),
-    }

@@ -92,7 +92,15 @@ class BotRunner:
                 logger.warning(f"Could not resolve product ID for {symbol}")
 
     async def _run_strategy_check(self):
-        """Main strategy execution loop - runs on scheduler interval."""
+        """
+        Main strategy loop — runs every 10 seconds.
+
+        Flow:
+          1. Fetch candles → update breakout range
+          2. Check if currently in a trade → if so, monitor position
+          3. If no trade → check for confirmation candle
+          4. If confirmed → enter market order + bracket (SL + TP)
+        """
         if self.state != "RUNNING":
             return
 
@@ -103,18 +111,18 @@ class BotRunner:
                 continue
 
             try:
-                # Fetch recent candles for breakout range
+                # 1. Fetch recent candles
                 candles = self.delta_client.get_candles(
                     symbol=symbol,
                     resolution=self.candle_resolution,
                     num_candles=self.lookback_candles,
                 )
 
-                if not candles or len(candles) < 2:
-                    logger.warning(f"[{symbol}] Not enough candle data (got {len(candles) if candles else 0})")
+                if not candles or len(candles) < 3:
+                    logger.warning(f"[{symbol}] Not enough candles (got {len(candles) if candles else 0})")
                     continue
 
-                # Get current price from latest candle or WebSocket
+                # Get current price
                 price_data = delta_ws.get_price(symbol)
                 if price_data:
                     current_price = float(price_data.get("close") or price_data.get("mark_price", 0))
@@ -122,47 +130,166 @@ class BotRunner:
                     current_price = float(candles[0]["close"])
 
                 if not current_price:
-                    logger.warning(f"[{symbol}] No current price available")
                     continue
 
-                # Update strategy with candle-based breakout levels
+                strategy.last_price = current_price
+
+                # 2. Update breakout levels from candles
                 strategy.update_levels_from_candles(candles)
 
-                # Log price vs breakout levels
-                pos_str = self.position_manager.get_current_position(symbol) or 'None'
-                dist_high = strategy._breakout_high - current_price if strategy._breakout_high else 0
-                dist_low = current_price - strategy._breakout_low if strategy._breakout_low else 0
-                logger.info(
-                    f"[{symbol}] Price: ${current_price:,.2f} | "
-                    f"Breakout: UP ${strategy._breakout_high:,.2f} (${dist_high:,.2f} away) / "
-                    f"DOWN ${strategy._breakout_low:,.2f} (${dist_low:,.2f} away) | Pos: {pos_str}"
-                )
+                # 3. If already in a trade — check if position is still open
+                if strategy.is_in_trade():
+                    await self._monitor_position(symbol, strategy, current_price)
+                    continue
 
-                # Check for signal
-                signal = strategy.check_signal(current_price)
-                current_pos = self.position_manager.get_current_position(symbol)
+                # 4. Safety checks
+                if not self.position_manager._check_daily_loss():
+                    continue
+                if not self.position_manager._check_cooldown(symbol):
+                    continue
 
-                if signal and signal != current_pos:
-                    self.total_signals += 1
-                    logger.info(f"[{symbol}] SIGNAL: {signal} (current pos: {current_pos})")
-
-                    # Execute trade
-                    result = await self.position_manager.execute_signal(
-                        symbol=symbol,
-                        signal=signal,
-                        quantity=strategy.quantity,
-                        current_price=current_price,
+                # 5. Check for confirmation candle
+                signal = strategy.check_confirmation_candle(candles)
+                if not signal:
+                    # Log status
+                    dist_high = strategy._breakout_high - current_price if strategy._breakout_high else 0
+                    dist_low = current_price - strategy._breakout_low if strategy._breakout_low else 0
+                    logger.info(
+                        f"[{symbol}] Price: ${current_price:,.2f} | "
+                        f"Waiting for confirmation | "
+                        f"UP ${strategy._breakout_high:,.2f} (${dist_high:,.2f}) / "
+                        f"DOWN ${strategy._breakout_low:,.2f} (${dist_low:,.2f})"
                     )
+                    continue
 
-                    if result and result.get("success"):
-                        strategy.current_position = signal
-                        self.total_trades += 1
-                        await self._log_trade(result)
-                    elif result:
-                        logger.warning(f"[{symbol}] Trade execution failed: {result.get('error')}")
+                # 6. SIGNAL CONFIRMED — Execute trade
+                self.total_signals += 1
+                logger.info(f"[{symbol}] CONFIRMED {signal} BREAKOUT!")
+
+                await self._execute_entry(symbol, strategy, signal, current_price)
 
             except Exception as e:
                 logger.error(f"[{symbol}] Strategy check error: {e}", exc_info=True)
+
+    async def _execute_entry(self, symbol: str, strategy: TrendHunterStrategy,
+                             signal: str, current_price: float):
+        """Execute a market entry order and attach bracket (SL + TP)."""
+        product_id = self.position_manager.get_product_id(symbol)
+        if not product_id:
+            logger.error(f"[{symbol}] Cannot resolve product ID")
+            return
+
+        # Calculate SL/TP at 1:1 RR
+        levels = strategy.calculate_sl_tp(current_price, signal)
+        sl_price = levels["stop_loss"]
+        tp_price = levels["take_profit"]
+
+        # Place market entry order
+        side = "buy" if signal == "LONG" else "sell"
+        order_result = self.delta_client.place_order(
+            product_id=product_id,
+            product_symbol=symbol,
+            side=side,
+            size=strategy.quantity,
+            order_type="market_order",
+        )
+
+        if not order_result.get("success") and not order_result.get("result"):
+            logger.error(f"[{symbol}] Entry order FAILED: {order_result}")
+            return
+
+        logger.info(f"[{symbol}] ENTERED {signal} @ ~${current_price:,.2f}")
+
+        # Place bracket order (SL + TP) on the position
+        bracket_result = self.delta_client.place_bracket_order(
+            product_id=product_id,
+            stop_loss_price=sl_price,
+            take_profit_price=tp_price,
+        )
+
+        if bracket_result.get("success") or bracket_result.get("result"):
+            logger.info(
+                f"[{symbol}] Bracket placed | SL: ${sl_price:,.2f} | TP: ${tp_price:,.2f}"
+            )
+        else:
+            logger.warning(f"[{symbol}] Bracket order failed: {bracket_result}")
+
+        # Record trade state
+        strategy.enter_trade(signal, current_price, sl_price, tp_price)
+        self.position_manager._positions[symbol] = {
+            "side": signal,
+            "size": strategy.quantity,
+            "entry_price": current_price,
+            "product_id": product_id,
+        }
+        self.position_manager._last_trade_time[symbol] = datetime.utcnow()
+        self.total_trades += 1
+
+        # Log to database
+        await self._log_trade({
+            "symbol": symbol,
+            "signal": signal,
+            "quantity": strategy.quantity,
+            "entry_price": current_price,
+            "stop_loss": sl_price,
+            "take_profit": tp_price,
+            "risk": levels["risk"],
+            "timestamp": datetime.utcnow().isoformat(),
+            "actions": [f"Market {signal}", f"SL: {sl_price}", f"TP: {tp_price}"],
+            "success": True,
+        })
+
+    async def _monitor_position(self, symbol: str, strategy: TrendHunterStrategy,
+                                current_price: float):
+        """Monitor an open position — check if SL/TP has been hit."""
+        product_id = self.position_manager.get_product_id(symbol)
+        if not product_id:
+            return
+
+        # Check actual position on exchange
+        pos_data = self.delta_client.get_position(product_id)
+        position_result = pos_data.get("result", {})
+
+        # Get position size — if 0, position was closed (SL or TP hit)
+        actual_size = int(position_result.get("size", 0)) if position_result else 0
+
+        if actual_size == 0:
+            # Position closed — SL or TP was hit
+            entry_price = strategy._entry_price or 0
+            pnl = 0
+            if strategy._trade_direction == "LONG":
+                pnl = (current_price - entry_price) * strategy.quantity
+            else:
+                pnl = (entry_price - current_price) * strategy.quantity
+
+            exit_type = "TP" if pnl > 0 else "SL"
+            logger.info(
+                f"[{symbol}] POSITION CLOSED by {exit_type} | "
+                f"Entry: ${entry_price:,.2f} | Exit: ~${current_price:,.2f} | "
+                f"PnL: ${pnl:,.2f}"
+            )
+
+            self.position_manager._daily_pnl += pnl
+            if symbol in self.position_manager._positions:
+                del self.position_manager._positions[symbol]
+
+            strategy.exit_trade()
+            return
+
+        # Position still open — log status
+        entry_price = strategy._entry_price or current_price
+        unrealized_pnl = 0
+        if strategy._trade_direction == "LONG":
+            unrealized_pnl = (current_price - entry_price) * strategy.quantity
+        else:
+            unrealized_pnl = (entry_price - current_price) * strategy.quantity
+
+        logger.info(
+            f"[{symbol}] IN {strategy._trade_direction} | "
+            f"Entry: ${entry_price:,.2f} | Now: ${current_price:,.2f} | "
+            f"PnL: ${unrealized_pnl:,.2f} | "
+            f"SL: ${strategy._stop_loss:,.2f} | TP: ${strategy._take_profit:,.2f}"
+        )
 
     async def _log_trade(self, trade_result: Dict):
         """Log a trade to the database."""
