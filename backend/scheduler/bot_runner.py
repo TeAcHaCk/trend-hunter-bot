@@ -115,7 +115,10 @@ class BotRunner:
                 continue
 
             try:
-                # 1. Get current price (fast — from WebSocket or latest cached candle)
+                # 1. Refresh candles if needed (first run or new candle formed)
+                await self._refresh_candles_if_needed(symbol, strategy)
+
+                # 2. Get current price
                 price_data = delta_ws.get_price(symbol)
                 if price_data:
                     current_price = float(price_data.get("close") or price_data.get("mark_price", 0))
@@ -125,27 +128,14 @@ class BotRunner:
                     current_price = 0
 
                 if not current_price:
-                    # No price yet — need initial candle fetch
-                    candles = self.delta_client.get_candles(
-                        symbol=symbol,
-                        resolution=self.candle_resolution,
-                        num_candles=self.lookback_candles,
-                    )
-                    if candles:
-                        self._cached_candles[symbol] = candles
-                        self._last_candle_time[symbol] = int(candles[0].get("time", 0))
-                        current_price = float(candles[0]["close"])
-                    if not current_price:
-                        continue
+                    logger.warning(f"[{symbol}] No price available")
+                    continue
 
                 strategy.last_price = current_price
 
-                # 2. Refresh candles only when a new candle has likely formed
-                #    Resolution determines refresh interval (15m = 900 seconds)
-                await self._refresh_candles_if_needed(symbol, strategy)
-
                 # 3. If levels not set yet, skip
                 if not strategy._levels_set:
+                    logger.warning(f"[{symbol}] Levels not set yet")
                     continue
 
                 # 4. If already in a trade — monitor position

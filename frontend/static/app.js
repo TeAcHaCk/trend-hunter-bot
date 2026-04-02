@@ -748,7 +748,10 @@ function getCheckVal(id) {
 
 function initChart() {
     const container = document.getElementById('kline-chart');
-    if (!container || typeof klinecharts === 'undefined') return;
+    if (!container || typeof klinecharts === 'undefined') {
+        console.warn('KLineChart not available');
+        return;
+    }
 
     klineChart = klinecharts.init('kline-chart', {
         styles: {
@@ -789,29 +792,50 @@ function initChart() {
         },
     });
 
-    loadChartData();
-
-    // Auto-refresh chart
-    chartRefreshTimer = setInterval(loadChartData, 30000);
-}
-
-async function loadChartData() {
-    if (!klineChart) return;
-
-    try {
-        const result = await apiGet(`/api/candles/${currentChartSymbol}?resolution=${currentTimeframe}&count=100`);
-        if (result.success && result.result && result.result.length > 0) {
-            klineChart.applyNewData(result.result);
-
-            // Add breakout level overlays
-            const strat = state.strategies[currentChartSymbol];
-            if (strat) {
-                updateChartOverlays(strat);
+    // Set data loader for KLineChart v10
+    klineChart.setDataLoader({
+        getBars: async ({ callback, symbol, period }) => {
+            try {
+                const tf = currentTimeframe || '15m';
+                const sym = currentChartSymbol || 'BTCUSD';
+                const result = await apiGet(`/api/candles/${sym}?resolution=${tf}&count=100`);
+                if (result.success && result.result && result.result.length > 0) {
+                    callback(result.result);
+                } else {
+                    callback([]);
+                }
+            } catch (e) {
+                console.error('Chart data fetch error:', e);
+                callback([]);
             }
         }
-    } catch (e) {
-        console.error('Chart data error:', e);
-    }
+    });
+
+    // Set symbol and period to trigger data load
+    klineChart.setSymbol({ ticker: currentChartSymbol });
+    klineChart.setPeriod({ span: parseInt(currentTimeframe) || 5, type: 'minute' });
+
+    // Auto-refresh chart
+    chartRefreshTimer = setInterval(refreshChart, 30000);
+}
+
+function refreshChart() {
+    if (!klineChart) return;
+    // Re-trigger data load by re-setting the symbol
+    klineChart.setSymbol({ ticker: currentChartSymbol });
+    klineChart.setPeriod(getPeriod(currentTimeframe));
+}
+
+function getPeriod(tf) {
+    const map = {
+        '1m': { span: 1, type: 'minute' },
+        '5m': { span: 5, type: 'minute' },
+        '15m': { span: 15, type: 'minute' },
+        '30m': { span: 30, type: 'minute' },
+        '1h': { span: 1, type: 'hour' },
+        '1d': { span: 1, type: 'day' },
+    };
+    return map[tf] || { span: 15, type: 'minute' };
 }
 
 function updateChartOverlays(strat) {
@@ -881,7 +905,7 @@ function switchChart(symbol) {
     const tab = document.getElementById(`tab-${symbol}`);
     if (tab) tab.classList.add('active');
 
-    loadChartData();
+    refreshChart();
 }
 
 function changeTimeframe(tf) {
@@ -892,7 +916,7 @@ function changeTimeframe(tf) {
     const btn = document.getElementById(`tf-${tf}`);
     if (btn) btn.classList.add('active');
 
-    loadChartData();
+    refreshChart();
 }
 
 
