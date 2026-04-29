@@ -22,10 +22,10 @@ The Trend Hunter strategy monitors the **24-hour high and low** of BTC and ETH p
 
 ## Quick Start
 
-### 1. Install Dependencies
+### 1. Clone & Install Dependencies
 ```bash
-cd "C:\Users\Project Alpha\Stock Market\trend-hunter-bot"
-conda activate base
+git clone https://github.com/TeAcHaCk/trend-hunter-bot.git
+cd trend-hunter-bot
 pip install -r requirements.txt
 ```
 
@@ -38,7 +38,6 @@ cp .env.example .env
 
 ### 3. Run the Bot
 ```bash
-conda activate base
 python -m uvicorn backend.main:app --reload --port 8000
 ```
 
