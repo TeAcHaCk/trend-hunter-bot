@@ -280,6 +280,8 @@ class TrendHunterStrategy:
             "stop_loss": self._stop_loss,
             "take_profit": self._take_profit,
             "orders_placed": self._orders_placed,
+            "orders_placed_at": self._orders_placed_time or None,
+            "order_expiry_seconds": self._order_expiry_seconds,
             "long_order_id": self._long_order_id,
             "short_order_id": self._short_order_id,
         }

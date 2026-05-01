@@ -32,8 +32,14 @@
 
         <div class="nav-status">
             <span id="testnet-badge" class="testnet-badge">TESTNET</span>
-            <div id="connection-dot" class="connection-dot disconnected" title="WebSocket Connection"></div>
-            <div id="bot-status-badge" class="status-badge stopped">
+            <div id="connection-dot" class="connection-dot disconnected"
+                 title="WebSocket Connection"
+                 aria-label="WebSocket connection indicator"></div>
+            <span id="last-update-pill" class="last-update-pill"
+                  title="Time since last update from server"
+                  aria-live="polite">...</span>
+            <div id="bot-status-badge" class="status-badge stopped"
+                 role="status" aria-live="polite" aria-label="Bot status">
                 <span class="status-dot"></span>STOPPED
             </div>
         </div>
@@ -68,7 +74,8 @@
                 <button class="tf-btn" id="tf-1h" onclick="changeTimeframe('1h')">1h</button>
             </div>
         </div>
-        <div id="kline-chart" style="width: 100%; height: 420px;"></div>
+        <div id="kline-chart" class="kline-chart skeleton"
+             style="width: 100%; height: clamp(280px, 50vh, 420px);"></div>
     </div>
 
     <!-- ═══ Price Tickers with Breakout Levels ═══ -->
@@ -84,7 +91,7 @@
                 <span class="card-icon">₿</span>
             </div>
 
-            <div id="price-BTCUSD" class="price-value">$—</div>
+            <div id="price-BTCUSD" class="price-value skeleton">$—</div>
 
             <!-- Breakout Range Bar -->
             <div class="breakout-bar-container" style="margin-top: 16px;">
@@ -163,7 +170,7 @@
                 <span class="card-icon">⟠</span>
             </div>
 
-            <div id="price-ETHUSD" class="price-value">$—</div>
+            <div id="price-ETHUSD" class="price-value skeleton">$—</div>
 
             <div class="breakout-bar-container" style="margin-top: 16px;">
                 <div id="fill-ETHUSD" class="breakout-bar-fill" style="width: 50%; background: var(--gradient-primary);"></div>
@@ -273,6 +280,16 @@
     </div>
 
 </div>
+
+<!-- Confirmation modal — used by Start/Stop/Pause and other risky actions -->
+<dialog id="confirm-modal" class="confirm-modal" aria-labelledby="confirm-title">
+    <h3 id="confirm-title" data-confirm-title>Confirm action</h3>
+    <p data-confirm-body>Are you sure?</p>
+    <div class="confirm-actions">
+        <button type="button" class="btn btn-outline" data-confirm-cancel>Cancel</button>
+        <button type="button" class="btn btn-success" data-confirm-ok>Confirm</button>
+    </div>
+</dialog>
 
 <script src="/static/app.js"></script>
 </body>
