@@ -29,6 +29,13 @@ class StrategySettingsRequest(BaseModel):
     leverage: int = 10
     candle_resolution: str = "15m"
     lookback_candles: int = 6
+    poll_interval_seconds: int = 3
+    sl_atr_mult: float = 1.0
+    tp_atr_mult: float = 1.5
+    min_sl_pct: float = 0.15
+    max_sl_pct: float = 1.5
+    require_volume_confirmation: bool = False
+    order_expiry_seconds: int = 1800
 
 
 class ApiKeysRequest(BaseModel):
@@ -108,7 +115,7 @@ async def test_connection():
         key_hint = '***' + client.api_key[-4:] if len(client.api_key) > 4 else '(empty)'
         logger.info(f"Testing connection | Key: {key_hint} | URL: {client.base_url}")
 
-        result = client.test_connection()
+        result = await client.test_connection()
 
         if result.get("success"):
             balances = result.get("result", [])

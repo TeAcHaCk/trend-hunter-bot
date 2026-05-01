@@ -31,9 +31,19 @@ class Settings:
         "cooldown_minutes": 5,
         "max_daily_loss": 100.0,
         "leverage": 10,
-        "poll_interval_seconds": 10,
+        # Faster default poll — REST is async now, so this is cheap
+        "poll_interval_seconds": 3,
         "candle_resolution": "15m",
         "lookback_candles": 6,
+        # ATR-based bracket exits (with sensible bounds)
+        "sl_atr_mult": 1.0,
+        "tp_atr_mult": 1.5,
+        "min_sl_pct": 0.15,
+        "max_sl_pct": 1.5,
+        # Filters
+        "require_volume_confirmation": False,
+        # How long pending limit orders live before being cancelled & re-armed
+        "order_expiry_seconds": 1800,
     }
 
     def __init__(self):
