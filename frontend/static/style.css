@@ -1257,3 +1257,98 @@ select.form-input {
     font-size: 0.65rem;
     color: var(--text-muted);
 }
+
+/* ─── Last-update / latency pill ───────────────────── */
+.last-update-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 0.68rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 999px;
+    transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    min-width: 48px;
+    justify-content: center;
+}
+.last-update-pill.stale {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.25);
+}
+
+/* ─── Native <dialog> confirmation modal ──────────── */
+.confirm-modal {
+    background: var(--bg-card, #0f1320);
+    color: var(--text-primary, #e6e8ef);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 24px 28px;
+    min-width: min(420px, 92vw);
+    max-width: 92vw;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+.confirm-modal::backdrop {
+    background: rgba(2, 6, 14, 0.62);
+    backdrop-filter: blur(4px);
+}
+.confirm-modal h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.05rem;
+    color: var(--text-bright, #fff);
+}
+.confirm-modal p {
+    margin: 0 0 18px 0;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    line-height: 1.55;
+}
+.confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* ─── Visible focus rings (a11y) ──────────────────── */
+.btn:focus-visible,
+.chart-tab:focus-visible,
+.tf-btn:focus-visible,
+.nav-link:focus-visible,
+.confirm-modal button:focus-visible {
+    outline: 2px solid var(--accent-cyan, #00d4ff);
+    outline-offset: 2px;
+}
+
+/* ─── Live-chart container polish ────────────────── */
+.kline-chart {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0 0 var(--radius-lg, 12px) var(--radius-lg, 12px);
+}
+/* Keep the shimmer subtle while the chart canvas paints */
+.kline-chart.skeleton {
+    background:
+        linear-gradient(90deg,
+            rgba(255,255,255,0.02) 25%,
+            rgba(255,255,255,0.05) 50%,
+            rgba(255,255,255,0.02) 75%);
+    background-size: 200% 100%;
+}
+
+/* ─── Responsive tweaks for the dashboard ────────── */
+@media (max-width: 640px) {
+    .nav-status .testnet-badge { display: none; }
+    .last-update-pill { display: none; }   /* save space on tiny screens */
+
+    /* Stick control buttons to the bottom of the viewport on phones */
+    .btn-group {
+        position: sticky;
+        bottom: 8px;
+        z-index: 50;
+        background: linear-gradient(180deg, transparent, var(--bg-app, #06080f) 35%);
+        padding: 10px 4px;
+    }
+    .btn-group .btn { flex: 1; }
+}

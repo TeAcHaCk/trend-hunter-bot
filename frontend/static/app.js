@@ -22,6 +22,7 @@ const state = {
     strategies: {},
     testnet: true,
     lastUpdate: null,
+    lastWsAt: null,   // performance.now() of last WS message
 };
 
 let ws = null;
@@ -33,33 +34,54 @@ let klineChart = null;
 let currentChartSymbol = 'BTCUSD';
 let currentTimeframe = '5m';
 let chartRefreshTimer = null;
+let lastChartBar = null;   // {timestamp, open, high, low, close, volume}
+
+// Bucket size in ms for each supported timeframe
+const TF_MS = {
+    '1m': 60_000,
+    '5m': 300_000,
+    '15m': 900_000,
+    '30m': 1_800_000,
+    '1h': 3_600_000,
+    '1d': 86_400_000,
+};
 
 // ═══════════════════════════════════════════════════════
 // API HELPERS
 // ═══════════════════════════════════════════════════════
 
 async function api(endpoint, options = {}) {
+    const { quiet, ...fetchOpts } = options;
     try {
         const response = await fetch(`${API_BASE}${endpoint}`, {
             headers: { 'Content-Type': 'application/json' },
-            ...options,
+            ...fetchOpts,
         });
         const data = await response.json();
+        if (!response.ok && !quiet) {
+            const msg = data?.error || data?.detail || `HTTP ${response.status}`;
+            showToast(`Request failed: ${msg}`, 'error');
+        } else if (data && data.success === false && !quiet) {
+            const msg = data.error || data.message || 'Request failed';
+            showToast(typeof msg === 'string' ? msg : JSON.stringify(msg), 'error');
+        }
         return data;
     } catch (error) {
         console.error(`API error [${endpoint}]:`, error);
+        if (!quiet) showToast(`Network error: ${error.message}`, 'error');
         return { success: false, error: error.message };
     }
 }
 
-async function apiGet(endpoint) {
-    return api(endpoint);
+async function apiGet(endpoint, options = {}) {
+    return api(endpoint, options);
 }
 
-async function apiPost(endpoint, body = {}) {
+async function apiPost(endpoint, body = {}, options = {}) {
     return api(endpoint, {
         method: 'POST',
         body: JSON.stringify(body),
+        ...options,
     });
 }
 
@@ -126,6 +148,26 @@ function updateConnectionDot(connected) {
     }
 }
 
+// Updates the "last update" pill once per second so the user can see at a
+// glance whether the feed is live. Stale (> 5 s) → amber. Disconnected → red.
+function updateLastUpdatePill() {
+    const pill = document.getElementById('last-update-pill');
+    if (!pill) return;
+    if (!state.wsConnected) {
+        pill.textContent = 'offline';
+        pill.className = 'last-update-pill stale';
+        return;
+    }
+    if (state.lastWsAt == null) {
+        pill.textContent = '...';
+        pill.className = 'last-update-pill';
+        return;
+    }
+    const ageMs = performance.now() - state.lastWsAt;
+    pill.textContent = formatAgo(ageMs);
+    pill.className = `last-update-pill ${ageMs > 5000 ? 'stale' : ''}`;
+}
+
 // ═══════════════════════════════════════════════════════
 // DATA HANDLERS
 // ═══════════════════════════════════════════════════════
@@ -134,7 +176,10 @@ function handlePriceUpdate(data) {
     if (!data || !data.symbol) return;
     const prev = state.prices[data.symbol]?.price || data.price;
     state.prices[data.symbol] = data;
+    state.lastWsAt = performance.now();
     updatePriceDisplay(data.symbol, data, prev);
+    const px = data.close || data.price || data.mark_price;
+    applyLiveTickToChart(data.symbol, parseFloat(px), parseFloat(data.volume));
 }
 
 function handleStatusUpdate(data) {
@@ -144,6 +189,7 @@ function handleStatusUpdate(data) {
     state.positions = data.position_manager?.positions || {};
     state.testnet = data.testnet ?? true;
     state.lastUpdate = new Date().toISOString();
+    state.lastWsAt = performance.now();
 
     if (data.prices) {
         Object.entries(data.prices).forEach(([symbol, priceData]) => {
@@ -170,8 +216,9 @@ function updatePriceDisplay(symbol, data, prevPrice) {
     const price = data.close || data.price || data.mark_price || 0;
     const direction = price > prevPrice ? 'up' : price < prevPrice ? 'down' : '';
 
-    // Animate price change
+    // Animate price change & drop the loading shimmer once a real value lands
     priceEl.textContent = formatPrice(price, symbol);
+    priceEl.classList.remove('skeleton');
     priceEl.className = `price-value ${direction}`;
 
     // Flash effect
@@ -306,7 +353,7 @@ function updateStrategiesUI() {
                     if (strat.trade_direction === 'LONG') pnl = price - strat.entry_price;
                     else pnl = strat.entry_price - price;
                     pnl *= (strat.quantity || 1);
-                    pnlEl.textContent = `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`;
+                    pnlEl.textContent = formatPnL(pnl);
                     pnlEl.style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
                 }
             }
@@ -328,25 +375,25 @@ function updateStrategiesUI() {
                 if (sellPrice && strat.breakout_low) sellPrice.textContent = formatPrice(strat.breakout_low, symbol);
                 if (sellId && strat.short_order_id) sellId.textContent = `#${strat.short_order_id}`;
 
-                // Countdown timer (30 min = 1800s from placement)
+                // Drift-free countdown — derive remaining from server timestamp
                 const timerEl = document.getElementById(`order-timer-${symbol}`);
                 if (timerEl) {
-                    // We track locally when we first saw orders_placed
-                    if (!window._orderStartTime) window._orderStartTime = {};
-                    if (!window._orderStartTime[symbol]) {
-                        window._orderStartTime[symbol] = Date.now();
-                    }
-                    const elapsedMs = Date.now() - window._orderStartTime[symbol];
-                    const remainingSec = Math.max(0, 1800 - Math.floor(elapsedMs / 1000));
-                    const mins = Math.floor(remainingSec / 60);
-                    const secs = remainingSec % 60;
-                    timerEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-
-                    // Change color when running low
-                    if (remainingSec < 120) {
-                        timerEl.style.color = 'var(--red)';
-                    } else if (remainingSec < 600) {
-                        timerEl.style.color = 'var(--amber)';
+                    const placedAt = strat.orders_placed_at;             // unix seconds
+                    const expiry = strat.order_expiry_seconds || 1800;
+                    if (placedAt) {
+                        const remainingSec = Math.max(
+                            0,
+                            Math.floor(placedAt + expiry - Date.now() / 1000),
+                        );
+                        const mins = Math.floor(remainingSec / 60);
+                        const secs = remainingSec % 60;
+                        timerEl.textContent =
+                            `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                        timerEl.style.color = remainingSec < 120
+                            ? 'var(--red)'
+                            : remainingSec < 600 ? 'var(--amber)' : '';
+                    } else {
+                        timerEl.textContent = '--:--';
                     }
                 }
             }
@@ -403,8 +450,8 @@ function updateStatsUI(data) {
     const pnl = data.position_manager?.daily_pnl || 0;
     const pnlEl = document.getElementById('stat-daily-pnl');
     if (pnlEl) {
-        pnlEl.textContent = `$${pnl.toFixed(2)}`;
-        pnlEl.style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+        pnlEl.textContent = formatPnL(pnl);
+        pnlEl.style.color = pnl > 0 ? 'var(--green)' : pnl < 0 ? 'var(--red)' : '';
     }
 
     if (data.last_check_time) {
@@ -417,12 +464,16 @@ function updateStatsUI(data) {
 // ═══════════════════════════════════════════════════════
 
 async function startBot() {
+    const verb = state.testnet ? 'start the bot on TESTNET' : 'start the bot on MAINNET';
+    if (!await confirmAction('Start bot?',
+            `This will ${verb} and begin placing orders. Continue?`)) return;
+
     const btn = document.getElementById('btn-start');
     if (btn) btn.disabled = true;
 
-    const result = await apiPost('/api/bot/start');
+    const result = await apiPost('/api/bot/start', {}, { quiet: true });
     if (result.success) {
-        showToast('Bot started successfully', 'success');
+        showToast('Bot started', 'success');
     } else {
         showToast(`Failed to start bot: ${result.error || 'Unknown error'}`, 'error');
         if (btn) btn.disabled = false;
@@ -430,21 +481,50 @@ async function startBot() {
 }
 
 async function stopBot() {
-    const result = await apiPost('/api/bot/stop');
-    if (result.success) {
-        showToast('Bot stopped', 'warning');
-    } else {
-        showToast(`Failed to stop: ${result.error}`, 'error');
-    }
+    if (!await confirmAction('Stop bot?',
+            'This cancels pending orders and exits any open positions on next cycle.')) return;
+    const result = await apiPost('/api/bot/stop', {}, { quiet: true });
+    if (result.success) showToast('Bot stopped', 'warning');
+    else showToast(`Failed to stop: ${result.error}`, 'error');
 }
 
 async function pauseBot() {
-    const result = await apiPost('/api/bot/pause');
-    if (result.success) {
-        showToast(result.message, 'info');
-    } else {
-        showToast(`Failed: ${result.error}`, 'error');
-    }
+    const result = await apiPost('/api/bot/pause', {}, { quiet: true });
+    if (result.success) showToast(result.message, 'info');
+    else showToast(`Failed: ${result.error}`, 'error');
+}
+
+// Lightweight confirmation modal backed by a <dialog> in index.html.
+// Falls back to window.confirm() if the dialog isn't present (testing/dev).
+function confirmAction(title, body) {
+    return new Promise((resolve) => {
+        const dialog = document.getElementById('confirm-modal');
+        if (!dialog || typeof dialog.showModal !== 'function') {
+            resolve(window.confirm(`${title}\n\n${body}`));
+            return;
+        }
+        const titleEl = dialog.querySelector('[data-confirm-title]');
+        const bodyEl = dialog.querySelector('[data-confirm-body]');
+        const okBtn = dialog.querySelector('[data-confirm-ok]');
+        const cancelBtn = dialog.querySelector('[data-confirm-cancel]');
+        if (titleEl) titleEl.textContent = title;
+        if (bodyEl) bodyEl.textContent = body;
+
+        const cleanup = (val) => {
+            okBtn?.removeEventListener('click', onOk);
+            cancelBtn?.removeEventListener('click', onCancel);
+            dialog.removeEventListener('cancel', onCancel);
+            try { dialog.close(); } catch (_) {}
+            resolve(val);
+        };
+        const onOk = () => cleanup(true);
+        const onCancel = (e) => { e?.preventDefault?.(); cleanup(false); };
+        okBtn?.addEventListener('click', onOk);
+        cancelBtn?.addEventListener('click', onCancel);
+        dialog.addEventListener('cancel', onCancel);
+        dialog.showModal();
+        okBtn?.focus();
+    });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -634,7 +714,7 @@ function renderTradesTable(trades) {
     tbody.innerHTML = trades.map(t => {
         const dirClass = t.direction === 'LONG' ? 'td-long' : 'td-short';
         const pnlClass = t.pnl > 0 ? 'td-pnl-pos' : t.pnl < 0 ? 'td-pnl-neg' : '';
-        const pnlText = t.pnl != null ? `$${t.pnl.toFixed(2)}` : '—';
+        const pnlText = t.pnl != null ? formatPnL(t.pnl) : '—';
         const time = t.timestamp ? new Date(t.timestamp).toLocaleString() : '—';
 
         return `<tr>
@@ -675,14 +755,16 @@ async function loadTradeStats() {
 
         const totalPnlEl = document.getElementById('stat-total-pnl');
         if (totalPnlEl) {
-            totalPnlEl.textContent = `$${(s.total_pnl || 0).toFixed(2)}`;
-            totalPnlEl.style.color = s.total_pnl >= 0 ? 'var(--green)' : 'var(--red)';
+            totalPnlEl.textContent = formatPnL(s.total_pnl || 0);
+            totalPnlEl.style.color = (s.total_pnl || 0) > 0 ? 'var(--green)'
+                : (s.total_pnl || 0) < 0 ? 'var(--red)' : '';
         }
 
         const todayPnlEl = document.getElementById('stat-today-pnl');
         if (todayPnlEl) {
-            todayPnlEl.textContent = `$${(s.today_pnl || 0).toFixed(2)}`;
-            todayPnlEl.style.color = s.today_pnl >= 0 ? 'var(--green)' : 'var(--red)';
+            todayPnlEl.textContent = formatPnL(s.today_pnl || 0);
+            todayPnlEl.style.color = (s.today_pnl || 0) > 0 ? 'var(--green)'
+                : (s.today_pnl || 0) < 0 ? 'var(--red)' : '';
         }
     }
 }
@@ -752,10 +834,36 @@ function showToast(message, type = 'info', duration = 5000) {
 // ═══════════════════════════════════════════════════════
 
 function formatPrice(price, symbol = '') {
-    if (!price) return '—';
+    if (price == null || price === '') return '—';
     const p = parseFloat(price);
-    if (symbol.startsWith('ETH')) return `$${p.toFixed(2)}`;
-    return `$${p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (!Number.isFinite(p)) return '—';
+    return `$${p.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })}`;
+}
+
+// Returns "+$1,234.56" / "-$1,234.56" / "$0.00" — caller can apply
+// .td-pnl-pos / .td-pnl-neg classes for color.
+function formatPnL(value) {
+    if (value == null || value === '' || !Number.isFinite(parseFloat(value))) return '—';
+    const v = parseFloat(value);
+    const sign = v > 0 ? '+' : v < 0 ? '-' : '';
+    return `${sign}$${Math.abs(v).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })}`;
+}
+
+// Relative-time string: "live", "3s ago", "1m ago"...
+function formatAgo(ms) {
+    if (ms == null) return '';
+    const s = Math.max(0, Math.floor(ms / 1000));
+    if (s < 1) return 'live';
+    if (s < 60) return `${s}s ago`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ago`;
+    return `${Math.floor(m / 60)}h ago`;
 }
 
 function formatVolume(vol) {
@@ -849,9 +957,15 @@ function initChart() {
             try {
                 const tf = currentTimeframe || '15m';
                 const sym = currentChartSymbol || 'BTCUSD';
-                const result = await apiGet(`/api/candles/${sym}?resolution=${tf}&count=100`);
+                const result = await apiGet(`/api/candles/${sym}?resolution=${tf}&count=100`,
+                                            { quiet: true });
                 if (result.success && result.result && result.result.length > 0) {
+                    // Loader gives us bars ascending; remember the latest so
+                    // live ticks can extend / replace it via klineChart.updateData
+                    lastChartBar = { ...result.result[result.result.length - 1] };
                     callback(result.result);
+                    // Hide chart skeleton on first successful load
+                    container.classList.remove('skeleton');
                 } else {
                     callback([]);
                 }
@@ -866,15 +980,58 @@ function initChart() {
     klineChart.setSymbol({ ticker: currentChartSymbol });
     klineChart.setPeriod({ span: parseInt(currentTimeframe) || 5, type: 'minute' });
 
-    // Auto-refresh chart
-    chartRefreshTimer = setInterval(refreshChart, 30000);
+    // Safety-net REST refresh (rare — live ticks already update the bar).
+    // Skip when tab is hidden to avoid wasted network.
+    chartRefreshTimer = setInterval(() => {
+        if (document.visibilityState === 'visible') refreshChart();
+    }, 60_000);
 }
 
 function refreshChart() {
     if (!klineChart) return;
     // Re-trigger data load by re-setting the symbol
+    lastChartBar = null;
     klineChart.setSymbol({ ticker: currentChartSymbol });
     klineChart.setPeriod(getPeriod(currentTimeframe));
+}
+
+// Push a live ticker into the chart's most-recent bar (or roll over to a new
+// one when the timeframe boundary is crossed). KLineChart v10 updateData()
+// replaces the latest bar in place, or appends if the timestamp is newer.
+function applyLiveTickToChart(symbol, price, volume) {
+    if (!klineChart || !lastChartBar) return;
+    if (symbol !== currentChartSymbol) return;
+    if (!Number.isFinite(price) || price <= 0) return;
+
+    const bucket = TF_MS[currentTimeframe] || TF_MS['15m'];
+    const nowMs = Date.now();
+    const bucketStart = Math.floor(nowMs / bucket) * bucket;
+
+    if (bucketStart === lastChartBar.timestamp) {
+        // Extend the in-progress candle
+        lastChartBar.high = Math.max(lastChartBar.high, price);
+        lastChartBar.low = Math.min(lastChartBar.low, price);
+        lastChartBar.close = price;
+    } else if (bucketStart > lastChartBar.timestamp) {
+        // Roll into a new candle
+        lastChartBar = {
+            timestamp: bucketStart,
+            open: price,
+            high: price,
+            low: price,
+            close: price,
+            volume: 0,
+        };
+    } else {
+        return; // tick is older than current bar — ignore
+    }
+
+    try {
+        klineChart.updateData(lastChartBar);
+    } catch (e) {
+        // KLineChart can throw mid-resize; swallow to avoid breaking the WS loop
+        console.debug('updateData error', e);
+    }
 }
 
 function getPeriod(tf) {
@@ -979,8 +1136,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Dashboard
         connectWebSocket();
         startPolling();
-        pollStatus(); // Immediate first fetch
-        initChart();  // Initialize KLineChart
+        pollStatus();        // Immediate first fetch (kicks off skeleton removal)
+        initChart();
+        // 1 Hz refresh of the "live / Ns ago" pill — independent of WS cadence
+        setInterval(updateLastUpdatePill, 1000);
+        // When the tab returns to the foreground, force one chart refresh so
+        // the live bar catches up to whatever was missed while hidden.
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') refreshChart();
+        });
     } else if (path === '/settings' || path === '/settings.html') {
         // Settings
         loadSettings();
