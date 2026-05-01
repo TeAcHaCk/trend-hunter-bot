@@ -19,7 +19,7 @@ import json
 import logging
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Optional, Any
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -53,6 +53,11 @@ class BotRunner:
         self.last_check_time: Optional[str] = None
         self.total_signals: int = 0
         self.total_trades: int = 0
+
+        # Daily counters — reset at the same time as daily_pnl
+        self.daily_signals: int = 0
+        self.daily_trades: int = 0
+        self._daily_counters_date: Optional[object] = None
 
         self._cached_candles: Dict[str, list] = {}
         self._last_candle_time: Dict[str, int] = {}
@@ -173,10 +178,19 @@ class BotRunner:
 
     # ── Main loop ────────────────────────────────────────────────
 
+    def _check_daily_reset(self):
+        """Reset daily counters when the UTC date rolls over."""
+        today = datetime.now(timezone.utc).date()
+        if self._daily_counters_date != today:
+            self.daily_signals = 0
+            self.daily_trades = 0
+            self._daily_counters_date = today
+
     async def _run_strategy_check(self):
         if self.state != "RUNNING":
             return
-        self.last_check_time = datetime.utcnow().isoformat()
+        self._check_daily_reset()
+        self.last_check_time = datetime.now(timezone.utc).isoformat()
 
         await asyncio.gather(
             *(self._check_symbol(sym) for sym in list(self.strategies.keys())),
@@ -340,6 +354,7 @@ class BotRunner:
                 short_coid=short_coid,
             )
             self.total_signals += 1
+            self.daily_signals += 1
             await self._persist_state()
         else:
             logger.error(f"[{symbol}] Both limit orders failed — will retry next cycle")
@@ -428,29 +443,29 @@ class BotRunner:
             sl_price = levels["stop_loss"]
             tp_price = levels["take_profit"]
 
-            # Issue bracket + opposite-cancel in parallel — minimises unprotected window
-            bracket_task = asyncio.create_task(self.delta_client.place_bracket_order(
-                product_id=product_id,
-                stop_loss_price=sl_price,
-                take_profit_price=tp_price,
-            ))
+            # Cancel opposite leg immediately
             cancel_tasks = []
             if other_order_id:
                 cancel_tasks.append(asyncio.create_task(
                     self.delta_client.cancel_order(other_order_id, product_id)
                 ))
+            if cancel_tasks:
+                await asyncio.gather(*cancel_tasks, return_exceptions=True)
 
-            results = await asyncio.gather(bracket_task, *cancel_tasks,
-                                           return_exceptions=True)
-            bracket_result = results[0]
+            # Try bracket order first (PUT /v2/orders/bracket)
+            bracket_ok = await self._place_bracket_with_fallback(
+                symbol=symbol,
+                product_id=product_id,
+                product_symbol=symbol,
+                direction=direction,
+                size=abs(actual_size),
+                sl_price=sl_price,
+                tp_price=tp_price,
+            )
 
-            if isinstance(bracket_result, Exception) or not (
-                isinstance(bracket_result, dict)
-                and (bracket_result.get("success") or bracket_result.get("result"))
-            ):
-                logger.warning(f"[{symbol}] Bracket order failed: {bracket_result} — "
-                               f"emergency closing position")
-                # Emergency: close the unprotected position to prevent runaway loss
+            if not bracket_ok:
+                logger.error(f"[{symbol}] Both bracket and fallback SL/TP failed — "
+                             f"emergency closing position")
                 await self.delta_client.close_position(
                     product_id=product_id,
                     product_symbol=symbol,
@@ -462,7 +477,7 @@ class BotRunner:
                 await self._persist_state()
                 return
 
-            logger.info(f"[{symbol}] Bracket placed | SL ${sl_price:,.2f} | TP ${tp_price:,.2f}")
+            logger.info(f"[{symbol}] SL/TP set | SL ${sl_price:,.2f} | TP ${tp_price:,.2f}")
 
             strategy.enter_trade(direction, entry_price, sl_price, tp_price)
             self.position_manager._positions[symbol] = {
@@ -473,6 +488,7 @@ class BotRunner:
             }
             self.position_manager.mark_trade_time(symbol)
             self.total_trades += 1
+            self.daily_trades += 1
 
             log_id = await self._log_trade_open(symbol, direction, abs(actual_size),
                                                 entry_price, sl_price, tp_price,
@@ -481,6 +497,78 @@ class BotRunner:
             await self._persist_state()
         finally:
             self._fill_in_progress[symbol] = False
+
+    async def _place_bracket_with_fallback(
+        self, symbol: str, product_id: int, product_symbol: str,
+        direction: str, size: int, sl_price: float, tp_price: float,
+    ) -> bool:
+        """Try bracket order; on failure, fall back to individual SL + TP orders.
+
+        Returns True if at least SL was placed successfully.
+        """
+        # --- Attempt 1: PUT bracket order ---
+        try:
+            bracket_result = await self.delta_client.place_bracket_order(
+                product_id=product_id,
+                product_symbol=product_symbol,
+                stop_loss_price=sl_price,
+                take_profit_price=tp_price,
+            )
+            if isinstance(bracket_result, dict) and (
+                bracket_result.get("success") or bracket_result.get("result")
+            ):
+                logger.info(f"[{symbol}] Bracket order placed successfully via PUT")
+                return True
+            else:
+                logger.warning(f"[{symbol}] Bracket order response: {bracket_result}")
+        except Exception as e:
+            logger.warning(f"[{symbol}] Bracket order exception: {e}")
+
+        # --- Attempt 2: Individual SL + TP orders ---
+        logger.info(f"[{symbol}] Falling back to individual SL/TP orders")
+        close_side = "sell" if direction == "LONG" else "buy"
+        sl_ok = False
+        tp_ok = False
+
+        try:
+            sl_result = await self.delta_client.place_stop_order(
+                product_id=product_id,
+                product_symbol=product_symbol,
+                side=close_side,
+                size=size,
+                stop_price=sl_price,
+            )
+            if isinstance(sl_result, dict) and (
+                sl_result.get("success") or sl_result.get("result")
+            ):
+                sl_ok = True
+                logger.info(f"[{symbol}] Fallback SL order placed @ ${sl_price:,.2f}")
+            else:
+                logger.error(f"[{symbol}] Fallback SL failed: {sl_result}")
+        except Exception as e:
+            logger.error(f"[{symbol}] Fallback SL exception: {e}")
+
+        try:
+            tp_result = await self.delta_client.place_take_profit_order(
+                product_id=product_id,
+                product_symbol=product_symbol,
+                side=close_side,
+                size=size,
+                stop_price=tp_price,
+            )
+            if isinstance(tp_result, dict) and (
+                tp_result.get("success") or tp_result.get("result")
+            ):
+                tp_ok = True
+                logger.info(f"[{symbol}] Fallback TP order placed @ ${tp_price:,.2f}")
+            else:
+                logger.error(f"[{symbol}] Fallback TP failed: {tp_result}")
+        except Exception as e:
+            logger.error(f"[{symbol}] Fallback TP exception: {e}")
+
+        if sl_ok:
+            return True  # at minimum the stop-loss is protecting us
+        return False
 
     async def _cancel_pending_orders(self, symbol: str,
                                      strategy: TrendHunterStrategy,
@@ -528,8 +616,9 @@ class BotRunner:
             return
 
         entry_price = strategy._entry_price or current_price
+        cv = self.position_manager.get_contract_value(symbol)
         unrealised = ((current_price - entry_price) if strategy._trade_direction == "LONG"
-                      else (entry_price - current_price)) * strategy.quantity
+                      else (entry_price - current_price)) * strategy.quantity * cv
         logger.info(
             f"[{symbol}] IN {strategy._trade_direction} | Entry: ${entry_price:,.2f} | "
             f"Now: ${current_price:,.2f} | uPnL: ${unrealised:,.2f} | "
@@ -555,10 +644,11 @@ class BotRunner:
         except Exception:
             pass
 
+        cv = self.position_manager.get_contract_value(symbol)
         if strategy._trade_direction == "LONG":
-            pnl = (exit_price - entry_price) * strategy.quantity
+            pnl = (exit_price - entry_price) * strategy.quantity * cv
         else:
-            pnl = (entry_price - exit_price) * strategy.quantity
+            pnl = (entry_price - exit_price) * strategy.quantity * cv
 
         exit_type = "TP" if pnl > 0 else "SL"
         logger.info(
@@ -608,9 +698,13 @@ class BotRunner:
     async def _persist_state(self):
         snap = {sym: strat.snapshot() for sym, strat in self.strategies.items()}
         snap["_meta"] = {
-            "saved_at": datetime.utcnow().isoformat(),
+            "saved_at": datetime.now(timezone.utc).isoformat(),
             "total_signals": self.total_signals,
             "total_trades": self.total_trades,
+            "daily_signals": self.daily_signals,
+            "daily_trades": self.daily_trades,
+            "daily_counters_date": (self._daily_counters_date.isoformat()
+                                    if self._daily_counters_date else None),
             "daily_pnl": self.position_manager._daily_pnl,
             "daily_pnl_reset_date": (self.position_manager._daily_pnl_reset_date.isoformat()
                                      if self.position_manager._daily_pnl_reset_date else None),
@@ -665,6 +759,19 @@ class BotRunner:
                 self.total_signals = int(meta["total_signals"])
             if meta.get("total_trades"):
                 self.total_trades = int(meta["total_trades"])
+            if meta.get("daily_signals") is not None:
+                self.daily_signals = int(meta["daily_signals"])
+            if meta.get("daily_trades") is not None:
+                self.daily_trades = int(meta["daily_trades"])
+            if meta.get("daily_counters_date"):
+                try:
+                    self._daily_counters_date = datetime.fromisoformat(
+                        meta["daily_counters_date"]
+                    ).date()
+                except Exception:
+                    pass
+            # Force a daily reset check in case the date has changed since the snapshot
+            self._check_daily_reset()
 
             # Sync against live positions
             positions_resp = await self.delta_client.get_positions()
@@ -674,16 +781,62 @@ class BotRunner:
                 for sym, strat in self.strategies.items():
                     live = self.position_manager._positions.get(sym)
                     if live:
+                        entry_price = live["entry_price"]
+                        direction = live["side"]
+                        size = live["size"]
+                        product_id = live.get("product_id")
+
+                        # Determine SL/TP — use persisted values if present,
+                        # otherwise compute from ATR/entry price
+                        sl = strat._stop_loss
+                        tp = strat._take_profit
+                        needs_sl_tp = (not sl or not tp or sl == 0 or tp == 0)
+
+                        if needs_sl_tp:
+                            levels = strat.calculate_sl_tp(entry_price, direction)
+                            sl = levels["stop_loss"]
+                            tp = levels["take_profit"]
+                            logger.info(
+                                f"[{sym}] Computed SL/TP for existing position: "
+                                f"SL=${sl:,.2f} TP=${tp:,.2f}"
+                            )
+
                         if not strat.is_in_trade():
                             strat.enter_trade(
-                                direction=live["side"],
-                                entry_price=live["entry_price"],
-                                stop_loss=strat._stop_loss or 0,
-                                take_profit=strat._take_profit or 0,
+                                direction=direction,
+                                entry_price=entry_price,
+                                stop_loss=sl,
+                                take_profit=tp,
                             )
                             logger.info(
-                                f"[{sym}] Reconciled: live position {live['side']} "
-                                f"size={live['size']} @ ${live['entry_price']:,.2f}"
+                                f"[{sym}] Reconciled: live position {direction} "
+                                f"size={size} @ ${entry_price:,.2f} "
+                                f"SL=${sl:,.2f} TP=${tp:,.2f}"
+                            )
+                        elif needs_sl_tp:
+                            # Strategy already in trade but SL/TP were missing
+                            strat._stop_loss = sl
+                            strat._take_profit = tp
+                            logger.info(
+                                f"[{sym}] Updated missing SL/TP on existing trade: "
+                                f"SL=${sl:,.2f} TP=${tp:,.2f}"
+                            )
+
+                        # Place bracket order on exchange if the position
+                        # doesn't have SL/TP protection set yet
+                        if needs_sl_tp and product_id:
+                            logger.info(
+                                f"[{sym}] Placing bracket for existing position "
+                                f"(SL/TP were not set on exchange)"
+                            )
+                            await self._place_bracket_with_fallback(
+                                symbol=sym,
+                                product_id=product_id,
+                                product_symbol=sym,
+                                direction=direction,
+                                size=size,
+                                sl_price=sl,
+                                tp_price=tp,
                             )
                     else:
                         if strat.is_in_trade():
@@ -851,6 +1004,7 @@ class BotRunner:
         for symbol, strategy in self.strategies.items():
             status = strategy.get_status()
             status["current_position"] = self.position_manager.get_current_position(symbol)
+            status["contract_value"] = self.position_manager.get_contract_value(symbol)
             strategies_status[symbol] = status
 
         return {
@@ -859,6 +1013,8 @@ class BotRunner:
             "last_check_time": self.last_check_time,
             "total_signals": self.total_signals,
             "total_trades": self.total_trades,
+            "daily_signals": self.daily_signals,
+            "daily_trades": self.daily_trades,
             "strategies": strategies_status,
             "position_manager": self.position_manager.get_status(),
             "prices": delta_ws.price_cache,

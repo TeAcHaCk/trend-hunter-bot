@@ -297,21 +297,85 @@ class DeltaClient:
         )
 
     async def place_bracket_order(self, product_id: int,
+                                  product_symbol: str,
                                   stop_loss_price: float,
                                   take_profit_price: float,
-                                  trail_amount: Optional[float] = None) -> Dict:
-        payload: Dict[str, Any] = {
-            "product_id": product_id,
-            "bracket_stop_loss_price": str(stop_loss_price),
-            "bracket_take_profit_price": str(take_profit_price),
+                                  trail_amount: Optional[float] = None,
+                                  bracket_stop_trigger_method: str = "last_traded_price") -> Dict:
+        """Attach SL/TP bracket to an existing position via PUT /v2/orders/bracket.
+
+        Uses the nested stop_loss_order / take_profit_order format required by
+        the Delta Exchange API.  Market-order exits are used so we guarantee
+        a fill when the trigger price is hit.
+        """
+        sl_order: Dict[str, Any] = {
+            "order_type": "market_order",
+            "stop_price": str(stop_loss_price),
         }
         if trail_amount:
-            payload["bracket_trail_amount"] = str(trail_amount)
+            sl_order["trail_amount"] = str(trail_amount)
+
+        tp_order: Dict[str, Any] = {
+            "order_type": "market_order",
+            "stop_price": str(take_profit_price),
+        }
+
+        payload: Dict[str, Any] = {
+            "product_id": product_id,
+            "product_symbol": product_symbol,
+            "stop_loss_order": sl_order,
+            "take_profit_order": tp_order,
+            "bracket_stop_trigger_method": bracket_stop_trigger_method,
+        }
 
         logger.info(
-            f"Placing bracket | PID={product_id} | SL={stop_loss_price} | TP={take_profit_price}"
+            f"Placing bracket (PUT) | PID={product_id} | SL={stop_loss_price} | TP={take_profit_price}"
         )
-        return await self._request("POST", "/v2/orders/bracket", data=payload, auth=True)
+        return await self._request("PUT", "/v2/orders/bracket", data=payload, auth=True)
+
+    async def place_stop_order(self, product_id: int, product_symbol: str,
+                               side: str, size: int,
+                               stop_price: float,
+                               order_type: str = "market_order",
+                               limit_price: Optional[str] = None) -> Dict:
+        """Place an individual stop-loss order as a fallback."""
+        payload: Dict[str, Any] = {
+            "product_id": product_id,
+            "product_symbol": product_symbol,
+            "size": size,
+            "side": side,
+            "order_type": order_type,
+            "stop_order_type": "stop_loss_order",
+            "stop_price": str(stop_price),
+            "reduce_only": True,
+        }
+        if order_type == "limit_order" and limit_price:
+            payload["limit_price"] = limit_price
+
+        logger.info(f"Placing stop-loss order | {side} {size} {product_symbol} @ stop={stop_price}")
+        return await self._request("POST", "/v2/orders", data=payload, auth=True)
+
+    async def place_take_profit_order(self, product_id: int, product_symbol: str,
+                                      side: str, size: int,
+                                      stop_price: float,
+                                      order_type: str = "market_order",
+                                      limit_price: Optional[str] = None) -> Dict:
+        """Place an individual take-profit order as a fallback."""
+        payload: Dict[str, Any] = {
+            "product_id": product_id,
+            "product_symbol": product_symbol,
+            "size": size,
+            "side": side,
+            "order_type": order_type,
+            "stop_order_type": "take_profit_order",
+            "stop_price": str(stop_price),
+            "reduce_only": True,
+        }
+        if order_type == "limit_order" and limit_price:
+            payload["limit_price"] = limit_price
+
+        logger.info(f"Placing take-profit order | {side} {size} {product_symbol} @ stop={stop_price}")
+        return await self._request("POST", "/v2/orders", data=payload, auth=True)
 
     async def get_order_by_id(self, order_id: int) -> Dict:
         return await self._request("GET", f"/v2/orders/{order_id}", auth=True)

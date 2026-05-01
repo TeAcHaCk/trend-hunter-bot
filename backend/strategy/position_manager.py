@@ -30,18 +30,38 @@ class PositionManager:
         self.max_daily_loss: float = 100.0
         self.leverage: int = 10
 
-        # Product ID cache
+        # Product ID and contract value cache
         self._product_ids: Dict[str, int] = {}
+        self._contract_values: Dict[str, float] = {}
 
     def set_product_id(self, symbol: str, product_id: int):
         self._product_ids[symbol] = product_id
 
     async def get_product_id(self, symbol: str) -> Optional[int]:
         if symbol not in self._product_ids:
-            pid = await self.client.get_product_id(symbol)
-            if pid:
-                self._product_ids[symbol] = pid
+            result = await self.client.get_product_by_symbol(symbol)
+            if result.get("success") and result.get("result"):
+                product = result["result"]
+                pid = product.get("id")
+                if pid:
+                    self._product_ids[symbol] = pid
+                # Cache contract_value while we have the product data
+                cv = product.get("contract_value")
+                if cv:
+                    self._contract_values[symbol] = float(cv)
         return self._product_ids.get(symbol)
+
+    def get_contract_value(self, symbol: str) -> float:
+        """Return the contract_value for a symbol.
+
+        BTCUSD = 0.001 BTC per contract, ETHUSD = 0.01 ETH per contract.
+        Falls back to sensible defaults if not yet fetched.
+        """
+        if symbol in self._contract_values:
+            return self._contract_values[symbol]
+        # Sensible defaults matching Delta Exchange India
+        defaults = {"BTCUSD": 0.001, "ETHUSD": 0.01}
+        return defaults.get(symbol, 0.001)
 
     def check_cooldown(self, symbol: str) -> bool:
         last_trade = self._last_trade_time.get(symbol)

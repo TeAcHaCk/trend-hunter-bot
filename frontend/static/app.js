@@ -346,13 +346,14 @@ function updateStrategiesUI() {
                 if (tpEl && strat.take_profit) tpEl.textContent = formatPrice(strat.take_profit, symbol);
                 if (entryEl && strat.entry_price) entryEl.textContent = formatPrice(strat.entry_price, symbol);
 
-                // Unrealized PnL
+                // Unrealized PnL (using contract_value for accurate USD PnL)
                 const pnlEl = document.getElementById(`trade-pnl-${symbol}`);
                 if (pnlEl && strat.entry_price && price) {
+                    const cv = strat.contract_value || (symbol.startsWith('BTC') ? 0.001 : 0.01);
                     let pnl = 0;
                     if (strat.trade_direction === 'LONG') pnl = price - strat.entry_price;
                     else pnl = strat.entry_price - price;
-                    pnl *= (strat.quantity || 1);
+                    pnl *= (strat.quantity || 1) * cv;
                     pnlEl.textContent = formatPnL(pnl);
                     pnlEl.style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
                 }
@@ -444,8 +445,9 @@ function updateStatsUI(data) {
         if (e) e.textContent = val;
     };
 
-    el('stat-signals', data.total_signals || 0);
-    el('stat-trades', data.total_trades || 0);
+    // Use daily counters if available, fall back to totals for backwards compat
+    el('stat-signals', data.daily_signals ?? data.total_signals ?? 0);
+    el('stat-trades', data.daily_trades ?? data.total_trades ?? 0);
 
     const pnl = data.position_manager?.daily_pnl || 0;
     const pnlEl = document.getElementById('stat-daily-pnl');
@@ -455,7 +457,7 @@ function updateStatsUI(data) {
     }
 
     if (data.last_check_time) {
-        el('stat-last-check', new Date(data.last_check_time + 'Z').toLocaleTimeString());
+        el('stat-last-check', new Date(data.last_check_time).toLocaleTimeString());
     }
 }
 
