@@ -30,16 +30,23 @@ console_handler = logging.StreamHandler(utf8_stream)
 console_handler.setFormatter(log_formatter)
 console_handler.setLevel(logging.INFO)
 
-# File handler — captures ALL output including scheduler
+# File handler — captures bot activity at INFO+ (DEBUG was flooding the file
+# with aiosqlite/urllib3 internals and slowing disk writes)
 file_handler = logging.FileHandler("bot_debug.log", mode="w", encoding="utf-8")
 file_handler.setFormatter(log_formatter)
-file_handler.setLevel(logging.DEBUG)
+file_handler.setLevel(logging.INFO)
 
 # Set up root logger
 root_logger = logging.getLogger()
-root_logger.setLevel(logging.DEBUG)
+root_logger.setLevel(logging.INFO)
 root_logger.addHandler(console_handler)
 root_logger.addHandler(file_handler)
+
+# Silence noisy third-party loggers
+for noisy in ("aiosqlite", "urllib3", "asyncio", "websockets.client",
+              "websockets.protocol", "apscheduler.scheduler",
+              "apscheduler.executors.default", "aiohttp.access"):
+    logging.getLogger(noisy).setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
@@ -57,12 +64,19 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Trend Hunter Futures Bot starting...")
     logger.info("=" * 60)
 
-    # Initialize database
+    # Initialize database first so we can read persisted settings
     await init_db()
     logger.info("✅ Database initialized")
 
-    # Initialize bot with saved/default settings
-    bot_runner.initialize()
+    # Load any persisted strategy settings, falling back to defaults
+    from backend.routers.settings import _load_settings
+    try:
+        saved_settings = await _load_settings()
+    except Exception as e:
+        logger.warning(f"Could not load saved settings, using defaults: {e}")
+        saved_settings = None
+
+    bot_runner.initialize(saved_settings)
     logger.info("✅ Bot initialized")
 
     yield
@@ -71,6 +85,12 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down...")
     if bot_runner.state != "STOPPED":
         await bot_runner.stop()
+    else:
+        # Even if already stopped, close the HTTP session cleanly
+        try:
+            await bot_runner.delta_client.close()
+        except Exception:
+            pass
     logger.info("👋 Trend Hunter Bot stopped")
 
 
@@ -82,12 +102,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS middleware
+# CORS middleware — locked to local dev origins by default. Override via
+# ALLOWED_ORIGINS env (comma-separated) for production deployments.
+_allowed = os.getenv("ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000")
+_origins = [o.strip() for o in _allowed.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 

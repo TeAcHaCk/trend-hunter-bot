@@ -1,15 +1,22 @@
 """
-Delta Exchange India REST API Client.
-Implements HMAC-SHA256 authentication per official docs.
+Delta Exchange India REST API Client (async).
+
+Highlights vs the previous sync client:
+  * aiohttp + connection pooling — no more event-loop blocking on order calls.
+  * Idempotency: callers may pass `client_order_id` to make order placement
+    safe to retry without duplicating fills.
+  * Centralised retry/backoff with proper handling of 429 / 5xx / network errors.
+  * Request timing instrumentation (latency_ms in result envelope) for tuning.
 """
 import hmac
 import hashlib
 import time
 import json
+import asyncio
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
-import requests
+import aiohttp
 
 from backend.config import settings
 
@@ -17,271 +24,270 @@ logger = logging.getLogger(__name__)
 
 
 class DeltaClient:
-    """REST API wrapper for Delta Exchange India."""
+    """Async REST API wrapper for Delta Exchange India."""
+
+    DEFAULT_TIMEOUT = aiohttp.ClientTimeout(total=15, connect=5)
 
     def __init__(self, api_key: str = "", api_secret: str = ""):
         self.api_key = api_key or settings.DELTA_API_KEY
         self.api_secret = api_secret or settings.DELTA_API_SECRET
-        self._session = requests.Session()
-        self._session.headers.update({
-            "User-Agent": "python-rest-client",
-            "Content-Type": "application/json",
-        })
-        logger.info(f"DeltaClient initialized | key={'***'+self.api_key[-4:] if len(self.api_key)>4 else '(empty)'} | url={self.base_url}")
+        self._session: Optional[aiohttp.ClientSession] = None
+        self._session_lock = asyncio.Lock()
+        logger.info(
+            f"DeltaClient initialized | key={'***'+self.api_key[-4:] if len(self.api_key)>4 else '(empty)'} | url={self.base_url}"
+        )
 
     @property
     def base_url(self) -> str:
         return settings.rest_url
 
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """Lazily create and reuse a single ClientSession (per event loop)."""
+        if self._session is None or self._session.closed:
+            async with self._session_lock:
+                if self._session is None or self._session.closed:
+                    connector = aiohttp.TCPConnector(
+                        limit=20,
+                        ttl_dns_cache=300,
+                        keepalive_timeout=60,
+                        enable_cleanup_closed=True,
+                    )
+                    self._session = aiohttp.ClientSession(
+                        connector=connector,
+                        timeout=self.DEFAULT_TIMEOUT,
+                        headers={
+                            "User-Agent": "trend-hunter-bot/1.1",
+                            "Content-Type": "application/json",
+                        },
+                    )
+        return self._session
+
+    async def close(self):
+        """Close the underlying HTTP session."""
+        if self._session and not self._session.closed:
+            await self._session.close()
+        self._session = None
+
     def _generate_signature(self, method: str, path: str,
                             query_string: str = "", payload: str = "") -> Dict[str, str]:
-        """
-        Generate HMAC-SHA256 signature per Delta Exchange docs.
-        Signature = HMAC-SHA256(secret, method + timestamp + path + query_string + payload)
-        """
+        """HMAC-SHA256 signature per Delta India docs."""
         timestamp = str(int(time.time()))
         signature_data = method + timestamp + path + query_string + payload
-
         signature = hmac.new(
             self.api_secret.encode("utf-8"),
             signature_data.encode("utf-8"),
-            hashlib.sha256
+            hashlib.sha256,
         ).hexdigest()
-
-        logger.debug(
-            f"Signature generated | method={method} | path={path} | "
-            f"ts={timestamp} | qs={query_string[:50] if query_string else '(none)'} | "
-            f"payload={payload[:80] if payload else '(none)'} | sig={signature[:16]}..."
-        )
-
         return {
             "api-key": self.api_key,
             "timestamp": timestamp,
             "signature": signature,
         }
 
-    def _request(self, method: str, path: str,
-                 params: Optional[Dict] = None,
-                 data: Optional[Dict] = None,
-                 auth: bool = False,
-                 max_retries: int = 3) -> Dict[str, Any]:
-        """Make an API request with optional authentication and retry logic."""
+    async def _request(self, method: str, path: str,
+                       params: Optional[Dict] = None,
+                       data: Optional[Dict] = None,
+                       auth: bool = False,
+                       max_retries: int = 3) -> Dict[str, Any]:
+        """Issue an authenticated/public request with retry + backoff."""
         url = f"{self.base_url}{path}"
         query_string = ""
         payload = ""
 
         if params:
             query_string = "?" + "&".join(f"{k}={v}" for k, v in params.items())
-        if data:
+        if data is not None:
             payload = json.dumps(data, separators=(",", ":"))
 
-        headers = {}
-        if auth:
-            if not self.api_key or not self.api_secret:
-                logger.error("API key or secret is empty! Cannot authenticate.")
-                return {"success": False, "error": {"code": "missing_credentials", "message": "API key or secret not configured"}}
-            headers = self._generate_signature(method, path, query_string, payload)
+        if auth and (not self.api_key or not self.api_secret):
+            return {
+                "success": False,
+                "error": {"code": "missing_credentials",
+                          "message": "API key or secret not configured"},
+            }
+
+        session = await self._get_session()
+        last_error: Optional[Dict] = None
 
         for attempt in range(max_retries):
+            t0 = time.perf_counter()
             try:
+                headers = {}
                 if auth:
-                    # Regenerate signature on retry (timestamp freshness)
                     headers = self._generate_signature(method, path, query_string, payload)
 
-                response = self._session.request(
+                request_url = url + query_string
+                async with session.request(
                     method=method,
-                    url=url + (query_string if params else ""),
-                    data=payload if data else None,
+                    url=request_url,
+                    data=payload if payload else None,
                     headers=headers,
-                    timeout=(5, 30),
-                )
+                ) as response:
+                    elapsed_ms = int((time.perf_counter() - t0) * 1000)
 
-                if response.status_code == 429:
-                    reset_ms = int(response.headers.get("X-RATE-LIMIT-RESET", 1000))
-                    wait_time = max(reset_ms / 1000, 1)
-                    logger.warning(f"Rate limited. Waiting {wait_time}s before retry...")
-                    time.sleep(wait_time)
-                    continue
+                    if response.status == 429:
+                        reset_ms = int(response.headers.get("X-RATE-LIMIT-RESET", "1000"))
+                        wait_s = max(reset_ms / 1000.0, 1.0)
+                        logger.warning(f"Rate limited ({path}); sleeping {wait_s:.2f}s")
+                        await asyncio.sleep(wait_s)
+                        continue
 
-                # Log auth failures with response body for debugging
-                if response.status_code == 401:
+                    text = await response.text()
                     try:
-                        error_body = response.json()
-                    except Exception:
-                        error_body = response.text[:200]
-                    logger.error(
-                        f"AUTH FAILED (401) | {method} {path} | "
-                        f"Response: {error_body} | "
-                        f"Key: {'***'+self.api_key[-4:] if len(self.api_key)>4 else '(empty)'} | "
-                        f"URL: {url}"
-                    )
-                    return {"success": False, "error": error_body.get("error", error_body) if isinstance(error_body, dict) else {"code": "unauthorized", "message": str(error_body)}}
+                        body = json.loads(text) if text else {}
+                    except json.JSONDecodeError:
+                        body = {"raw": text[:500]}
 
-                if response.status_code == 403:
-                    try:
-                        error_body = response.json()
-                    except Exception:
-                        error_body = response.text[:200]
-                    logger.error(f"FORBIDDEN (403) | {method} {path} | Response: {error_body}")
-                    return {"success": False, "error": {"code": "forbidden", "message": str(error_body)}}
+                    if response.status == 401:
+                        logger.error(f"AUTH FAILED (401) | {method} {path} | {body}")
+                        err = body.get("error", body) if isinstance(body, dict) else body
+                        return {"success": False,
+                                "error": err if isinstance(err, dict) else {"code": "unauthorized", "message": str(err)},
+                                "latency_ms": elapsed_ms}
 
-                response.raise_for_status()
-                return response.json()
+                    if response.status == 403:
+                        logger.error(f"FORBIDDEN (403) | {method} {path} | {body}")
+                        return {"success": False,
+                                "error": {"code": "forbidden", "message": str(body)},
+                                "latency_ms": elapsed_ms}
 
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Request failed (attempt {attempt + 1}/{max_retries}): {e}")
-                if attempt < max_retries - 1:
-                    time.sleep(2 ** attempt)
-                else:
-                    return {"success": False, "error": {"code": "request_failed", "message": str(e)}}
+                    if 500 <= response.status < 600:
+                        last_error = {"code": f"http_{response.status}", "message": str(body)[:300]}
+                        logger.warning(f"5xx from {path}: {last_error}")
+                        await asyncio.sleep(min(2 ** attempt, 5))
+                        continue
 
-        return {"success": False, "error": {"code": "max_retries", "message": "Max retries exceeded"}}
+                    if response.status >= 400:
+                        return {"success": False,
+                                "error": body.get("error", body) if isinstance(body, dict) else body,
+                                "latency_ms": elapsed_ms}
+
+                    if isinstance(body, dict):
+                        body.setdefault("latency_ms", elapsed_ms)
+                    return body
+
+            except asyncio.TimeoutError:
+                last_error = {"code": "timeout", "message": f"timeout after {self.DEFAULT_TIMEOUT.total}s"}
+                logger.warning(f"Timeout {method} {path} (attempt {attempt+1}/{max_retries})")
+                await asyncio.sleep(min(2 ** attempt, 5))
+            except aiohttp.ClientError as e:
+                last_error = {"code": "request_failed", "message": str(e)}
+                logger.warning(f"ClientError {method} {path}: {e}")
+                await asyncio.sleep(min(2 ** attempt, 5))
+
+        return {"success": False,
+                "error": last_error or {"code": "max_retries", "message": "Max retries exceeded"}}
 
     # ─── Public Endpoints ──────────────────────
 
-    def get_products(self) -> Dict:
-        """Get list of all trading products."""
-        return self._request("GET", "/v2/products")
+    async def get_products(self) -> Dict:
+        return await self._request("GET", "/v2/products")
 
-    def get_product_by_symbol(self, symbol: str) -> Dict:
-        """Get product details by symbol."""
-        return self._request("GET", f"/v2/products/{symbol}")
+    async def get_product_by_symbol(self, symbol: str) -> Dict:
+        return await self._request("GET", f"/v2/products/{symbol}")
 
-    def get_ticker(self, symbol: str) -> Dict:
-        """Get live ticker data including 24h high/low."""
-        return self._request("GET", f"/v2/tickers/{symbol}")
+    async def get_ticker(self, symbol: str) -> Dict:
+        return await self._request("GET", f"/v2/tickers/{symbol}")
 
-    def get_tickers(self, contract_types: str = "perpetual_futures") -> Dict:
-        """Get tickers for specified contract types."""
-        return self._request("GET", "/v2/tickers", params={"contract_types": contract_types})
+    async def get_tickers(self, contract_types: str = "perpetual_futures") -> Dict:
+        return await self._request("GET", "/v2/tickers", params={"contract_types": contract_types})
 
-    def get_orderbook(self, symbol: str) -> Dict:
-        """Get L2 orderbook."""
-        return self._request("GET", f"/v2/l2orderbook/{symbol}")
+    async def get_orderbook(self, symbol: str) -> Dict:
+        return await self._request("GET", f"/v2/l2orderbook/{symbol}")
 
-    def get_candles(self, symbol: str, resolution: str = "15m",
-                    num_candles: int = 6) -> list:
-        """
-        Fetch recent OHLC candles from Delta Exchange.
-
-        Args:
-            symbol: Trading pair (e.g., "BTCUSD", "ETHUSD")
-            resolution: Candle timeframe - "1m", "5m", "15m", "1h", "1d"
-            num_candles: Number of candles to fetch (e.g., 6 = 1.5hrs on 15m)
-
-        Returns:
-            List of candle dicts with: open, high, low, close, volume, time
-            Sorted newest first.
-        """
+    async def get_candles(self, symbol: str, resolution: str = "15m",
+                          num_candles: int = 6) -> List[Dict]:
         resolution_seconds = {
             "1m": 60, "5m": 300, "15m": 900,
             "30m": 1800, "1h": 3600, "1d": 86400,
         }
         secs = resolution_seconds.get(resolution, 900)
         now = int(time.time())
-        start = now - (num_candles * secs) - secs  # Extra buffer for partial candle
+        start = now - (num_candles * secs) - secs
 
-        result = self._request("GET", "/v2/history/candles", params={
+        result = await self._request("GET", "/v2/history/candles", params={
             "resolution": resolution,
             "symbol": symbol,
             "start": str(start),
             "end": str(now),
         })
-
-        candles = result.get("result", [])
-        if candles:
-            logger.debug(f"Fetched {len(candles)} candles for {symbol} ({resolution})")
-        else:
+        candles = result.get("result", []) if isinstance(result, dict) else []
+        if not candles:
             logger.warning(f"No candle data returned for {symbol} ({resolution})")
         return candles
 
     # ─── Authenticated Endpoints ──────────────────────
 
-    def test_connection(self) -> Dict:
-        """Test API connection by fetching wallet balances."""
-        return self.get_wallet_balances()
+    async def test_connection(self) -> Dict:
+        return await self.get_wallet_balances()
 
-    def get_wallet_balances(self) -> Dict:
-        """Get wallet balances."""
-        return self._request("GET", "/v2/wallet/balances", auth=True)
+    async def get_wallet_balances(self) -> Dict:
+        return await self._request("GET", "/v2/wallet/balances", auth=True)
 
-    def get_positions(self) -> Dict:
-        """Get all margined positions."""
-        return self._request("GET", "/v2/positions/margined", auth=True)
+    async def get_positions(self) -> Dict:
+        return await self._request("GET", "/v2/positions/margined", auth=True)
 
-    def get_position(self, product_id: int) -> Dict:
-        """Get position for a specific product."""
-        return self._request("GET", "/v2/positions", params={"product_id": product_id}, auth=True)
+    async def get_position(self, product_id: int) -> Dict:
+        return await self._request("GET", "/v2/positions",
+                                   params={"product_id": product_id}, auth=True)
 
-    def get_active_orders(self, product_id: Optional[int] = None) -> Dict:
-        """Get active orders, optionally filtered by product."""
-        params = {}
-        if product_id:
-            params["product_id"] = product_id
-        return self._request("GET", "/v2/orders", params=params if params else None, auth=True)
+    async def get_active_orders(self, product_id: Optional[int] = None) -> Dict:
+        params = {"product_id": product_id} if product_id else None
+        return await self._request("GET", "/v2/orders", params=params, auth=True)
 
-    def get_order_history(self, page_size: int = 50) -> Dict:
-        """Get order history (cancelled and closed)."""
-        return self._request("GET", "/v2/orders/history",
-                             params={"page_size": page_size}, auth=True)
+    async def get_order_history(self, page_size: int = 50) -> Dict:
+        return await self._request("GET", "/v2/orders/history",
+                                   params={"page_size": page_size}, auth=True)
 
-    def place_order(self, product_id: int, product_symbol: str,
-                    side: str, size: int,
-                    order_type: str = "market_order",
-                    limit_price: Optional[str] = None,
-                    reduce_only: bool = False) -> Dict:
+    async def place_order(self, product_id: int, product_symbol: str,
+                          side: str, size: int,
+                          order_type: str = "market_order",
+                          limit_price: Optional[str] = None,
+                          reduce_only: bool = False,
+                          client_order_id: Optional[str] = None,
+                          time_in_force: Optional[str] = None,
+                          post_only: bool = False) -> Dict:
         """
-        Place a new order on Delta Exchange.
-
-        Args:
-            product_id: Product ID (e.g., 27 for BTCUSD)
-            product_symbol: Symbol (e.g., "BTCUSD")
-            side: "buy" or "sell"
-            size: Number of contracts
-            order_type: "market_order" or "limit_order"
-            limit_price: Required for limit orders
-            reduce_only: If True, only reduces existing position
+        Place an order. Pass `client_order_id` to make retries idempotent —
+        Delta will reject a second order with the same ID instead of double-filling.
         """
-        payload = {
+        payload: Dict[str, Any] = {
             "product_id": product_id,
             "product_symbol": product_symbol,
             "size": size,
             "side": side,
             "order_type": order_type,
         }
-
-        if order_type == "limit_order" and limit_price:
+        if order_type == "limit_order" and limit_price is not None:
             payload["limit_price"] = limit_price
-
         if reduce_only:
             payload["reduce_only"] = True
+        if client_order_id:
+            payload["client_order_id"] = client_order_id
+        if time_in_force:
+            payload["time_in_force"] = time_in_force
+        if post_only:
+            payload["post_only"] = True
 
-        logger.info(f"Placing order: {side} {size} {product_symbol} ({order_type})")
-        return self._request("POST", "/v2/orders", data=payload, auth=True)
+        logger.info(
+            f"Placing order: {side} {size} {product_symbol} ({order_type})"
+            + (f" @ {limit_price}" if limit_price else "")
+            + (f" coid={client_order_id}" if client_order_id else "")
+        )
+        return await self._request("POST", "/v2/orders", data=payload, auth=True)
 
-    def cancel_order(self, order_id: int, product_id: int) -> Dict:
-        """Cancel an existing order."""
+    async def cancel_order(self, order_id: int, product_id: int) -> Dict:
         payload = {"id": order_id, "product_id": product_id}
-        return self._request("DELETE", "/v2/orders", data=payload, auth=True)
+        return await self._request("DELETE", "/v2/orders", data=payload, auth=True)
 
-    def cancel_all_orders(self, product_id: Optional[int] = None) -> Dict:
-        """Cancel all open orders, optionally for a specific product."""
-        payload = {}
-        if product_id:
-            payload["product_id"] = product_id
-        return self._request("DELETE", "/v2/orders/all", data=payload, auth=True)
+    async def cancel_all_orders(self, product_id: Optional[int] = None) -> Dict:
+        payload = {"product_id": product_id} if product_id else {}
+        return await self._request("DELETE", "/v2/orders/all", data=payload, auth=True)
 
-    def close_position(self, product_id: int, product_symbol: str,
-                       current_side: str, size: int) -> Dict:
-        """
-        Close an existing position by placing an opposite market order.
-
-        Args:
-            current_side: "LONG" or "SHORT" (the current position direction)
-            size: Number of contracts to close
-        """
+    async def close_position(self, product_id: int, product_symbol: str,
+                             current_side: str, size: int) -> Dict:
         close_side = "sell" if current_side == "LONG" else "buy"
-        return self.place_order(
+        return await self.place_order(
             product_id=product_id,
             product_symbol=product_symbol,
             side=close_side,
@@ -290,20 +296,11 @@ class DeltaClient:
             reduce_only=True,
         )
 
-    def place_bracket_order(self, product_id: int,
-                            stop_loss_price: float,
-                            take_profit_price: float,
-                            trail_amount: Optional[float] = None) -> Dict:
-        """
-        Place a bracket order (SL + TP) on an existing position.
-        Uses OCO logic — when one triggers, the other cancels.
-
-        Args:
-            product_id: Product ID
-            stop_loss_price: Mark price to trigger stop loss
-            take_profit_price: Mark price to trigger take profit
-        """
-        payload = {
+    async def place_bracket_order(self, product_id: int,
+                                  stop_loss_price: float,
+                                  take_profit_price: float,
+                                  trail_amount: Optional[float] = None) -> Dict:
+        payload: Dict[str, Any] = {
             "product_id": product_id,
             "bracket_stop_loss_price": str(stop_loss_price),
             "bracket_take_profit_price": str(take_profit_price),
@@ -312,39 +309,30 @@ class DeltaClient:
             payload["bracket_trail_amount"] = str(trail_amount)
 
         logger.info(
-            f"Placing bracket order | PID={product_id} | "
-            f"SL={stop_loss_price} | TP={take_profit_price}"
+            f"Placing bracket | PID={product_id} | SL={stop_loss_price} | TP={take_profit_price}"
         )
-        return self._request("POST", "/v2/orders/bracket", data=payload, auth=True)
+        return await self._request("POST", "/v2/orders/bracket", data=payload, auth=True)
 
-    def get_order_by_id(self, order_id: int) -> Dict:
-        """Get order details by ID."""
-        return self._request("GET", f"/v2/orders/{order_id}", auth=True)
+    async def get_order_by_id(self, order_id: int) -> Dict:
+        return await self._request("GET", f"/v2/orders/{order_id}", auth=True)
 
-    def cancel_product_orders(self, product_id: int) -> Dict:
-        """Cancel all open orders for a specific product."""
-        return self.cancel_all_orders(product_id=product_id)
+    async def cancel_product_orders(self, product_id: int) -> Dict:
+        return await self.cancel_all_orders(product_id=product_id)
 
-    def set_leverage(self, product_id: int, leverage: int) -> Dict:
-        """Set leverage for a product."""
-        payload = {
-            "product_id": product_id,
-            "leverage": str(leverage),
-        }
-        return self._request("POST", "/v2/orders/leverage", data=payload, auth=True)
+    async def set_leverage(self, product_id: int, leverage: int) -> Dict:
+        payload = {"product_id": product_id, "leverage": str(leverage)}
+        return await self._request("POST", "/v2/orders/leverage", data=payload, auth=True)
 
     # ─── Utility Methods ──────────────────────
 
-    def get_product_id(self, symbol: str) -> Optional[int]:
-        """Resolve a symbol to its product ID."""
-        result = self.get_product_by_symbol(symbol)
+    async def get_product_id(self, symbol: str) -> Optional[int]:
+        result = await self.get_product_by_symbol(symbol)
         if result.get("success") and result.get("result"):
             return result["result"]["id"]
         return None
 
-    def get_24h_high_low(self, symbol: str) -> Optional[Dict[str, float]]:
-        """Get the 24h high and low for a symbol from ticker data."""
-        result = self.get_ticker(symbol)
+    async def get_24h_high_low(self, symbol: str) -> Optional[Dict[str, float]]:
+        result = await self.get_ticker(symbol)
         if result.get("success") and result.get("result"):
             ticker = result["result"]
             return {

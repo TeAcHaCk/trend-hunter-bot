@@ -64,7 +64,7 @@ async def pause_bot():
 async def get_positions():
     """Get current open positions from Delta Exchange."""
     try:
-        result = bot_runner.delta_client.get_positions()
+        result = await bot_runner.delta_client.get_positions()
         return {"success": True, "result": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -74,7 +74,7 @@ async def get_positions():
 async def get_balance():
     """Get wallet balance from Delta Exchange."""
     try:
-        result = bot_runner.delta_client.get_wallet_balances()
+        result = await bot_runner.delta_client.get_wallet_balances()
         return {"success": True, "result": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -84,7 +84,7 @@ async def get_balance():
 async def get_candles(symbol: str, resolution: str = "15m", count: int = 50):
     """Get OHLC candle data for chart display."""
     try:
-        candles = bot_runner.delta_client.get_candles(
+        candles = await bot_runner.delta_client.get_candles(
             symbol=symbol,
             resolution=resolution,
             num_candles=count,
