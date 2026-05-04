@@ -40,8 +40,8 @@ class Settings:
         "tp_atr_mult": 2.5,
         "min_sl_pct": 0.15,
         "max_sl_pct": 1.5,
-        # Filters
-        "require_volume_confirmation": True,
+        # Filters (volume filter OFF by default — enable for production)
+        "require_volume_confirmation": False,
         # How long pending stop orders live before being cancelled & re-armed
         "order_expiry_seconds": 600,
         # EMA trend filter
