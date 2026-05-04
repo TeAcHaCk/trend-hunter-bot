@@ -80,32 +80,6 @@ async def get_balance():
         return {"success": False, "error": str(e)}
 
 
-@router.get("/candles/{symbol}")
-async def get_candles(symbol: str, resolution: str = "15m", count: int = 50):
-    """Get OHLC candle data for chart display."""
-    try:
-        candles = await bot_runner.delta_client.get_candles(
-            symbol=symbol,
-            resolution=resolution,
-            num_candles=count,
-        )
-        # Format for KLineChart: {timestamp, open, high, low, close, volume}
-        formatted = []
-        for c in (candles or []):
-            formatted.append({
-                "timestamp": int(c.get("time", 0)) * 1000,  # KLineChart needs ms
-                "open": float(c.get("open", 0)),
-                "high": float(c.get("high", 0)),
-                "low": float(c.get("low", 0)),
-                "close": float(c.get("close", 0)),
-                "volume": float(c.get("volume", 0)),
-            })
-        # Sort oldest first (KLineChart expects ascending order)
-        formatted.sort(key=lambda x: x["timestamp"])
-        return {"success": True, "result": formatted}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
 
 @router.websocket("/ws/live")
 async def websocket_live(websocket: WebSocket):

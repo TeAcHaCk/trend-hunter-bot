@@ -29,22 +29,12 @@ let ws = null;
 let reconnectTimer = null;
 let statusPollTimer = null;
 
-// Chart state
-let klineChart = null;
-let currentChartSymbol = 'BTCUSD';
-let currentTimeframe = '5m';
-let chartRefreshTimer = null;
-let lastChartBar = null;   // {timestamp, open, high, low, close, volume}
-
-// Bucket size in ms for each supported timeframe
-const TF_MS = {
-    '1m': 60_000,
-    '5m': 300_000,
-    '15m': 900_000,
-    '30m': 1_800_000,
-    '1h': 3_600_000,
-    '1d': 86_400_000,
-};
+// Activity log state
+const MAX_LOG_ENTRIES = 50;
+let _prevBotStatus = null;
+let _prevSignalCount = 0;
+let _prevTradeCount = 0;
+let _prevOrdersPlaced = {}; // symbol -> bool
 
 // ═══════════════════════════════════════════════════════
 // API HELPERS
@@ -178,18 +168,59 @@ function handlePriceUpdate(data) {
     state.prices[data.symbol] = data;
     state.lastWsAt = performance.now();
     updatePriceDisplay(data.symbol, data, prev);
-    const px = data.close || data.price || data.mark_price;
-    applyLiveTickToChart(data.symbol, parseFloat(px), parseFloat(data.volume));
 }
 
 function handleStatusUpdate(data) {
     if (!data) return;
-    state.botStatus = data.state || 'STOPPED';
+
+    const newStatus = data.state || 'STOPPED';
+
+    // Detect bot state changes for the activity log
+    if (_prevBotStatus !== null && _prevBotStatus !== newStatus) {
+        const icons = { RUNNING: '▶', STOPPED: '⏹', PAUSED: '⏸' };
+        appendActivityLog(`Bot ${newStatus.toLowerCase()}`, 'system', icons[newStatus] || '🤖');
+    }
+    _prevBotStatus = newStatus;
+
+    state.botStatus = newStatus;
     state.strategies = data.strategies || {};
     state.positions = data.position_manager?.positions || {};
     state.testnet = data.testnet ?? true;
     state.lastUpdate = new Date().toISOString();
     state.lastWsAt = performance.now();
+
+    // Detect new signals
+    const newSignals = data.daily_signals ?? data.total_signals ?? 0;
+    if (newSignals > _prevSignalCount && _prevSignalCount >= 0) {
+        const diff = newSignals - _prevSignalCount;
+        appendActivityLog(`${diff} new breakout signal${diff > 1 ? 's' : ''} detected`, 'signal', '⚡');
+    }
+    _prevSignalCount = newSignals;
+
+    // Detect new trades
+    const newTrades = data.daily_trades ?? data.total_trades ?? 0;
+    if (newTrades > _prevTradeCount && _prevTradeCount >= 0) {
+        const diff = newTrades - _prevTradeCount;
+        appendActivityLog(`${diff} new trade${diff > 1 ? 's' : ''} executed`, 'trade', '🔄');
+    }
+    _prevTradeCount = newTrades;
+
+    // Detect order placement per symbol
+    if (data.strategies) {
+        Object.entries(data.strategies).forEach(([symbol, strat]) => {
+            const wasPlaced = _prevOrdersPlaced[symbol] || false;
+            if (strat.orders_placed && !wasPlaced) {
+                appendActivityLog(`${symbol} limit orders placed at breakout levels`, 'signal', '⏳');
+            } else if (!strat.orders_placed && wasPlaced && !strat.in_trade) {
+                appendActivityLog(`${symbol} pending orders expired / cancelled`, 'system', '🗑️');
+            }
+            if (strat.in_trade && !wasPlaced) {
+                const dir = strat.trade_direction || 'UNKNOWN';
+                appendActivityLog(`${symbol} ${dir} trade opened`, 'trade', dir === 'LONG' ? '📈' : '📉');
+            }
+            _prevOrdersPlaced[symbol] = strat.orders_placed || strat.in_trade || false;
+        });
+    }
 
     if (data.prices) {
         Object.entries(data.prices).forEach(([symbol, priceData]) => {
@@ -203,6 +234,7 @@ function handleStatusUpdate(data) {
     updateStrategiesUI();
     updatePositionsUI();
     updateStatsUI(data);
+    updateKpiStrip(data);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -900,258 +932,187 @@ function getCheckVal(id) {
 }
 
 // ═══════════════════════════════════════════════════════
-// INITIALIZATION
+// KPI STRIP
 // ═══════════════════════════════════════════════════════
 
+function updateKpiStrip(data) {
+    const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+    el('kpi-signals', data.daily_signals ?? data.total_signals ?? 0);
+    el('kpi-trades',  data.daily_trades  ?? data.total_trades  ?? 0);
+
+    const pnl = data.position_manager?.daily_pnl || 0;
+    const pnlEl = document.getElementById('kpi-daily-pnl');
+    if (pnlEl) {
+        pnlEl.textContent = formatPnL(pnl);
+        pnlEl.style.color = pnl > 0 ? 'var(--green)' : pnl < 0 ? 'var(--red)' : '';
+    }
+}
+
 // ═══════════════════════════════════════════════════════
-// KLINECHART
+// WALLET BALANCE
 // ═══════════════════════════════════════════════════════
 
-function initChart() {
-    const container = document.getElementById('kline-chart');
-    if (!container || typeof klinecharts === 'undefined') {
-        console.warn('KLineChart not available');
+const ASSET_ICONS = {
+    'BTC': '₿', 'ETH': '⟠', 'USDT': '₮', 'USD': '$',
+    'INR': '₹', 'USDC': '💵',
+};
+
+async function loadBalance() {
+    const container = document.getElementById('wallet-container');
+    if (!container) return;
+
+    const refreshBtn = document.getElementById('btn-refresh-balance');
+    if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = '↻ Loading...'; }
+
+    const result = await apiGet('/api/balance', { quiet: true });
+
+    if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.textContent = '↻ Refresh'; }
+
+    if (!result.success) {
+        container.innerHTML = `
+            <div class="wallet-empty">
+                <div class="wallet-empty-icon">🔑</div>
+                <div>Configure API keys to view balance</div>
+            </div>`;
         return;
     }
 
-    klineChart = klinecharts.init('kline-chart', {
-        styles: {
-            grid: {
-                show: true,
-                horizontal: { color: 'rgba(56, 68, 100, 0.15)' },
-                vertical: { color: 'rgba(56, 68, 100, 0.15)' },
-            },
-            candle: {
-                type: 'candle_solid',
-                priceMark: { show: true, high: { show: true }, low: { show: true }, last: { show: true } },
-                bar: {
-                    upColor: '#10b981',
-                    downColor: '#ef4444',
-                    upBorderColor: '#10b981',
-                    downBorderColor: '#ef4444',
-                    upWickColor: '#10b981',
-                    downWickColor: '#ef4444',
-                },
-            },
-            indicator: {
-                ohlc: { upColor: '#10b981', downColor: '#ef4444' },
-            },
-            xAxis: {
-                axisLine: { color: 'rgba(56, 68, 100, 0.3)' },
-                tickText: { color: '#8b949e' },
-            },
-            yAxis: {
-                axisLine: { color: 'rgba(56, 68, 100, 0.3)' },
-                tickText: { color: '#8b949e' },
-            },
-            separator: { color: 'rgba(56, 68, 100, 0.2)' },
-            crosshair: {
-                show: true,
-                horizontal: { line: { color: 'rgba(0, 212, 255, 0.3)' } },
-                vertical: { line: { color: 'rgba(0, 212, 255, 0.3)' } },
-            },
-        },
-    });
+    // Normalise the response — Delta returns result as array or {result: array}
+    let balances = result.result || [];
+    if (balances.result) balances = balances.result;
+    if (!Array.isArray(balances)) balances = [];
 
-    // Set data loader for KLineChart v10
-    klineChart.setDataLoader({
-        getBars: async ({ callback, symbol, period }) => {
-            try {
-                const tf = currentTimeframe || '15m';
-                const sym = currentChartSymbol || 'BTCUSD';
-                const result = await apiGet(`/api/candles/${sym}?resolution=${tf}&count=100`,
-                                            { quiet: true });
-                if (result.success && result.result && result.result.length > 0) {
-                    // Loader gives us bars ascending; remember the latest so
-                    // live ticks can extend / replace it via klineChart.updateData
-                    lastChartBar = { ...result.result[result.result.length - 1] };
-                    callback(result.result);
-                    // Hide chart skeleton on first successful load
-                    container.classList.remove('skeleton');
-                } else {
-                    callback([]);
-                }
-            } catch (e) {
-                console.error('Chart data fetch error:', e);
-                callback([]);
-            }
-        }
-    });
+    // Filter to non-zero balances
+    const nonZero = balances.filter(b => parseFloat(b.balance || b.amount || 0) > 0);
 
-    // Set symbol and period to trigger data load
-    klineChart.setSymbol({ ticker: currentChartSymbol });
-    klineChart.setPeriod({ span: parseInt(currentTimeframe) || 5, type: 'minute' });
-
-    // Safety-net REST refresh (rare — live ticks already update the bar).
-    // Skip when tab is hidden to avoid wasted network.
-    chartRefreshTimer = setInterval(() => {
-        if (document.visibilityState === 'visible') refreshChart();
-    }, 60_000);
-}
-
-function refreshChart() {
-    if (!klineChart) return;
-    // Re-trigger data load by re-setting the symbol
-    lastChartBar = null;
-    klineChart.setSymbol({ ticker: currentChartSymbol });
-    klineChart.setPeriod(getPeriod(currentTimeframe));
-}
-
-// Push a live ticker into the chart's most-recent bar (or roll over to a new
-// one when the timeframe boundary is crossed). KLineChart v10 updateData()
-// replaces the latest bar in place, or appends if the timestamp is newer.
-function applyLiveTickToChart(symbol, price, volume) {
-    if (!klineChart || !lastChartBar) return;
-    if (symbol !== currentChartSymbol) return;
-    if (!Number.isFinite(price) || price <= 0) return;
-
-    const bucket = TF_MS[currentTimeframe] || TF_MS['15m'];
-    const nowMs = Date.now();
-    const bucketStart = Math.floor(nowMs / bucket) * bucket;
-
-    if (bucketStart === lastChartBar.timestamp) {
-        // Extend the in-progress candle
-        lastChartBar.high = Math.max(lastChartBar.high, price);
-        lastChartBar.low = Math.min(lastChartBar.low, price);
-        lastChartBar.close = price;
-    } else if (bucketStart > lastChartBar.timestamp) {
-        // Roll into a new candle
-        lastChartBar = {
-            timestamp: bucketStart,
-            open: price,
-            high: price,
-            low: price,
-            close: price,
-            volume: 0,
-        };
-    } else {
-        return; // tick is older than current bar — ignore
+    if (nonZero.length === 0) {
+        container.innerHTML = `
+            <div class="wallet-empty">
+                <div class="wallet-empty-icon">💼</div>
+                <div>No balances found</div>
+            </div>`;
+        return;
     }
 
-    try {
-        klineChart.updateData(lastChartBar);
-    } catch (e) {
-        // KLineChart can throw mid-resize; swallow to avoid breaking the WS loop
-        console.debug('updateData error', e);
+    container.innerHTML = nonZero.map(b => {
+        const sym = b.asset_symbol || b.asset_id || 'UNKNOWN';
+        const bal = parseFloat(b.balance || b.amount || 0);
+        const icon = ASSET_ICONS[sym] || sym.charAt(0);
+        const availBal = parseFloat(b.available_balance || bal);
+        return `
+            <div class="wallet-row">
+                <div class="wallet-asset">
+                    <div class="wallet-asset-icon">${icon}</div>
+                    <div>
+                        <div class="wallet-asset-name">${sym}</div>
+                        <div class="wallet-asset-sub">Available: ${availBal.toFixed(4)}</div>
+                    </div>
+                </div>
+                <div class="wallet-balance">
+                    <div class="wallet-balance-value">${bal.toFixed(4)}</div>
+                    <div class="wallet-balance-usd">${sym}</div>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// DASHBOARD STATS (from /api/trades/stats)
+// ═══════════════════════════════════════════════════════
+
+async function loadDashboardStats() {
+    const result = await apiGet('/api/trades/stats', { quiet: true });
+    if (!result.success) return;
+    const s = result.result;
+
+    const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+    el('kpi-winrate', `${s.win_rate || 0}%`);
+
+    const totalPnlEl = document.getElementById('kpi-total-pnl');
+    if (totalPnlEl) {
+        totalPnlEl.textContent = formatPnL(s.total_pnl || 0);
+        totalPnlEl.style.color = (s.total_pnl || 0) > 0 ? 'var(--green)'
+            : (s.total_pnl || 0) < 0 ? 'var(--red)' : '';
+    }
+
+    const todayPnlEl = document.getElementById('kpi-daily-pnl');
+    if (todayPnlEl && s.today_pnl != null) {
+        todayPnlEl.textContent = formatPnL(s.today_pnl || 0);
+        todayPnlEl.style.color = (s.today_pnl || 0) > 0 ? 'var(--green)'
+            : (s.today_pnl || 0) < 0 ? 'var(--red)' : '';
     }
 }
 
-function getPeriod(tf) {
-    const map = {
-        '1m': { span: 1, type: 'minute' },
-        '5m': { span: 5, type: 'minute' },
-        '15m': { span: 15, type: 'minute' },
-        '30m': { span: 30, type: 'minute' },
-        '1h': { span: 1, type: 'hour' },
-        '1d': { span: 1, type: 'day' },
-    };
-    return map[tf] || { span: 15, type: 'minute' };
-}
+// ═══════════════════════════════════════════════════════
+// ACTIVITY LOG
+// ═══════════════════════════════════════════════════════
 
-function updateChartOverlays(strat) {
-    if (!klineChart) return;
+function appendActivityLog(message, type = 'system', icon = 'ℹ️') {
+    const log = document.getElementById('activity-log');
+    if (!log) return;
 
-    // Remove old overlays
-    klineChart.removeOverlay();
+    // Remove empty-state placeholder if present
+    const empty = log.querySelector('.activity-log-empty');
+    if (empty) empty.remove();
 
-    // Add breakout high line
-    if (strat.breakout_high) {
-        klineChart.createOverlay({
-            name: 'horizontalStraightLine',
-            points: [{ value: strat.breakout_high }],
-            styles: {
-                line: { color: '#10b981', size: 1, style: 'dashed' },
-            },
-            lock: true,
-        });
-    }
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
 
-    // Add breakout low line
-    if (strat.breakout_low) {
-        klineChart.createOverlay({
-            name: 'horizontalStraightLine',
-            points: [{ value: strat.breakout_low }],
-            styles: {
-                line: { color: '#ef4444', size: 1, style: 'dashed' },
-            },
-            lock: true,
-        });
-    }
+    const entry = document.createElement('div');
+    entry.className = `activity-entry ${type}`;
+    entry.innerHTML = `
+        <div class="activity-entry-icon">${icon}</div>
+        <div class="activity-entry-body">
+            <div class="activity-entry-msg">${message}</div>
+            <div class="activity-entry-time">${timeStr}</div>
+        </div>`;
 
-    // Add SL/TP if in trade
-    if (strat.in_trade) {
-        if (strat.stop_loss) {
-            klineChart.createOverlay({
-                name: 'horizontalStraightLine',
-                points: [{ value: strat.stop_loss }],
-                styles: { line: { color: '#ef4444', size: 2, style: 'solid' } },
-                lock: true,
-            });
-        }
-        if (strat.take_profit) {
-            klineChart.createOverlay({
-                name: 'horizontalStraightLine',
-                points: [{ value: strat.take_profit }],
-                styles: { line: { color: '#10b981', size: 2, style: 'solid' } },
-                lock: true,
-            });
-        }
-        if (strat.entry_price) {
-            klineChart.createOverlay({
-                name: 'horizontalStraightLine',
-                points: [{ value: strat.entry_price }],
-                styles: { line: { color: '#00d4ff', size: 1, style: 'solid' } },
-                lock: true,
-            });
-        }
+    log.insertBefore(entry, log.firstChild);
+
+    // Cap at MAX_LOG_ENTRIES
+    while (log.children.length > MAX_LOG_ENTRIES) {
+        log.removeChild(log.lastChild);
     }
 }
 
-function switchChart(symbol) {
-    currentChartSymbol = symbol;
-
-    // Update tab active state
-    document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
-    const tab = document.getElementById(`tab-${symbol}`);
-    if (tab) tab.classList.add('active');
-
-    refreshChart();
+function clearActivityLog() {
+    const log = document.getElementById('activity-log');
+    if (!log) return;
+    log.innerHTML = `<div class="activity-log-empty">Log cleared</div>`;
 }
 
-function changeTimeframe(tf) {
-    currentTimeframe = tf;
-
-    // Update button active state
-    document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
-    const btn = document.getElementById(`tf-${tf}`);
-    if (btn) btn.classList.add('active');
-
-    refreshChart();
-}
+// ═══════════════════════════════════════════════════════
+// INITIALIZATION
+// ═══════════════════════════════════════════════════════
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Determine which page we're on
     const path = window.location.pathname;
 
     if (path === '/' || path === '/index.html' || path === '') {
         // Dashboard
         connectWebSocket();
         startPolling();
-        pollStatus();        // Immediate first fetch (kicks off skeleton removal)
-        initChart();
-        // 1 Hz refresh of the "live / Ns ago" pill — independent of WS cadence
+        pollStatus();   // Immediate first fetch
+
+        // Load balance and trade stats on startup
+        loadBalance();
+        loadDashboardStats();
+
+        // Seed activity log
+        appendActivityLog('Dashboard connected', 'system', '🟢');
+
+        // Refresh balance every 30 s
+        setInterval(loadBalance, 30_000);
+        // Refresh trade stats every 60 s
+        setInterval(loadDashboardStats, 60_000);
+
+        // 1 Hz refresh of the "live / Ns ago" pill
         setInterval(updateLastUpdatePill, 1000);
-        // When the tab returns to the foreground, force one chart refresh so
-        // the live bar catches up to whatever was missed while hidden.
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') refreshChart();
-        });
+
     } else if (path === '/settings' || path === '/settings.html') {
-        // Settings
         loadSettings();
     } else if (path === '/trades' || path === '/trades.html') {
-        // Trades
         loadTrades();
         loadTradeStats();
     }

@@ -7,8 +7,6 @@
     <title>Trend Hunter Bot — Dashboard</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
-    <!-- KLineChart -->
-    <script src="https://cdn.jsdelivr.net/npm/klinecharts/dist/umd/klinecharts.min.js"></script>
 </head>
 <body>
 
@@ -56,26 +54,6 @@
             <button id="btn-pause" class="btn btn-outline" onclick="pauseBot()" disabled>⏸ Pause</button>
             <button id="btn-stop" class="btn btn-danger" onclick="stopBot()" disabled>⏹ Stop</button>
         </div>
-    </div>
-
-    <!-- ═══ Chart Section ═══ -->
-    <div class="card" style="margin-bottom: var(--space-xl); padding: 0; overflow: hidden;">
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border);">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <span class="card-title">📈 Live Chart</span>
-                <div class="chart-symbol-tabs">
-                    <button class="chart-tab active" id="tab-BTCUSD" onclick="switchChart('BTCUSD')">₿ BTC</button>
-                    <button class="chart-tab" id="tab-ETHUSD" onclick="switchChart('ETHUSD')">⟠ ETH</button>
-                </div>
-            </div>
-            <div style="display: flex; gap: 6px;">
-                <button class="tf-btn active" id="tf-5m" onclick="changeTimeframe('5m')">5m</button>
-                <button class="tf-btn" id="tf-15m" onclick="changeTimeframe('15m')">15m</button>
-                <button class="tf-btn" id="tf-1h" onclick="changeTimeframe('1h')">1h</button>
-            </div>
-        </div>
-        <div id="kline-chart" class="kline-chart skeleton"
-             style="width: 100%; height: clamp(280px, 50vh, 420px);"></div>
     </div>
 
     <!-- ═══ Price Tickers with Breakout Levels ═══ -->
@@ -233,6 +211,65 @@
                     <div><span class="entry-label">Entry</span> <span id="trade-entry-ETHUSD">—</span></div>
                     <div><span class="tp-label">TP</span> <span id="trade-tp-ETHUSD">—</span></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Performance KPI Strip ═══ -->
+    <div class="kpi-strip" style="margin-bottom: var(--space-xl);">
+        <div class="kpi-card kpi-signals">
+            <div class="kpi-icon">⚡</div>
+            <div class="kpi-value" id="kpi-signals">0</div>
+            <div class="kpi-label">Signals Today</div>
+        </div>
+        <div class="kpi-card kpi-trades">
+            <div class="kpi-icon">🔄</div>
+            <div class="kpi-value" id="kpi-trades">0</div>
+            <div class="kpi-label">Trades Executed</div>
+        </div>
+        <div class="kpi-card kpi-winrate">
+            <div class="kpi-icon">🎯</div>
+            <div class="kpi-value" id="kpi-winrate">—%</div>
+            <div class="kpi-label">Win Rate</div>
+        </div>
+        <div class="kpi-card kpi-pnl">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-value" id="kpi-daily-pnl">$0.00</div>
+            <div class="kpi-label">Today's PnL</div>
+        </div>
+        <div class="kpi-card kpi-total-pnl">
+            <div class="kpi-icon">📈</div>
+            <div class="kpi-value" id="kpi-total-pnl">$0.00</div>
+            <div class="kpi-label">Total PnL</div>
+        </div>
+    </div>
+
+    <!-- ═══ Wallet Balance + Activity Log ═══ -->
+    <div class="grid-2" style="margin-bottom: var(--space-xl);">
+
+        <!-- Wallet Balance Card -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">💼 Wallet Balance</span>
+                <button class="btn btn-ghost btn-sm" id="btn-refresh-balance" onclick="loadBalance()" title="Refresh balance">↻ Refresh</button>
+            </div>
+            <div id="wallet-container">
+                <div class="wallet-skeleton">
+                    <div class="skeleton" style="height: 20px; border-radius: 4px; margin-bottom: 10px;"></div>
+                    <div class="skeleton" style="height: 20px; border-radius: 4px; margin-bottom: 10px; width: 75%;"></div>
+                    <div class="skeleton" style="height: 20px; border-radius: 4px; width: 55%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Activity Log -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">📡 Activity Log</span>
+                <button class="btn btn-ghost btn-sm" onclick="clearActivityLog()" title="Clear log">Clear</button>
+            </div>
+            <div id="activity-log" class="activity-log">
+                <!-- entries injected by JS -->
             </div>
         </div>
     </div>

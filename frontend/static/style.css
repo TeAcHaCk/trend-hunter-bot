@@ -1001,54 +1001,228 @@ select.form-input {
     .col-span-2 { grid-column: span 1; }
 }
 
-/* ─── Chart Tabs & Timeframe ──────────────────────── */
-.chart-symbol-tabs {
-    display: flex;
-    gap: 4px;
-    background: var(--bg-input);
-    border-radius: var(--radius-sm);
-    padding: 3px;
+/* ─── KPI Performance Strip ──────────────────────── */
+.kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--space-md);
 }
 
-.chart-tab {
-    padding: 5px 14px;
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-sm);
-    color: var(--text-muted);
-    font-family: 'Inter', sans-serif;
-    font-size: 0.78rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-fast);
+@media (max-width: 1024px) {
+    .kpi-strip { grid-template-columns: repeat(3, 1fr); }
 }
 
-.chart-tab:hover { color: var(--text-primary); }
-
-.chart-tab.active {
-    background: rgba(0, 212, 255, 0.12);
-    color: var(--accent-cyan);
+@media (max-width: 640px) {
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
 }
 
-.tf-btn {
-    padding: 4px 10px;
-    background: rgba(255, 255, 255, 0.04);
+.kpi-card {
+    position: relative;
+    background: var(--gradient-card);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg) var(--space-md);
+    text-align: center;
+    overflow: hidden;
+    transition: all var(--transition-base);
+}
+
+.kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.kpi-signals::before  { background: var(--gradient-primary); }
+.kpi-trades::before   { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+.kpi-winrate::before  { background: var(--gradient-green); }
+.kpi-pnl::before      { background: linear-gradient(90deg, #f59e0b, #fcd34d); }
+.kpi-total-pnl::before { background: linear-gradient(90deg, #a855f7, #c084fc); }
+
+.kpi-signals:hover  { border-color: rgba(0, 212, 255, 0.25); box-shadow: 0 4px 20px rgba(0, 212, 255, 0.08); }
+.kpi-trades:hover   { border-color: rgba(59, 130, 246, 0.25); box-shadow: 0 4px 20px rgba(59, 130, 246, 0.08); }
+.kpi-winrate:hover  { border-color: rgba(16, 185, 129, 0.25); box-shadow: 0 4px 20px rgba(16, 185, 129, 0.08); }
+.kpi-pnl:hover      { border-color: rgba(245, 158, 11, 0.25); box-shadow: 0 4px 20px rgba(245, 158, 11, 0.08); }
+.kpi-total-pnl:hover { border-color: rgba(168, 85, 247, 0.25); box-shadow: 0 4px 20px rgba(168, 85, 247, 0.08); }
+
+.kpi-icon {
+    font-size: 1.4rem;
+    margin-bottom: var(--space-sm);
+    opacity: 0.85;
+}
+
+.kpi-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: var(--text-bright);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-bottom: 4px;
+    transition: color var(--transition-fast);
+}
+
+.kpi-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+/* ─── Wallet Balance Card ──────────────────────── */
+.wallet-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(56, 68, 100, 0.15);
+}
+
+.wallet-row:last-child { border-bottom: none; }
+
+.wallet-asset {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wallet-asset-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+}
+
+.wallet-asset-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.wallet-asset-sub {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.wallet-balance {
+    text-align: right;
+}
+
+.wallet-balance-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-bright);
+}
+
+.wallet-balance-usd {
+    font-size: 0.7rem;
     color: var(--text-muted);
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-fast);
 }
 
-.tf-btn:hover { color: var(--text-primary); border-color: var(--text-muted); }
+.wallet-empty {
+    text-align: center;
+    padding: var(--space-xl) 0;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
 
-.tf-btn.active {
-    background: rgba(0, 212, 255, 0.12);
-    color: var(--accent-cyan);
-    border-color: rgba(0, 212, 255, 0.3);
+.wallet-empty .wallet-empty-icon {
+    font-size: 2rem;
+    margin-bottom: var(--space-sm);
+    opacity: 0.4;
+}
+
+.wallet-skeleton {
+    padding: var(--space-sm) 0;
+}
+
+/* ─── Activity Log ──────────────────────── */
+.activity-log {
+    max-height: 280px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.activity-log::-webkit-scrollbar { width: 4px; }
+.activity-log::-webkit-scrollbar-track { background: transparent; }
+.activity-log::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
+
+.activity-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    border-left: 3px solid transparent;
+    margin-bottom: 4px;
+    background: rgba(255, 255, 255, 0.015);
+    transition: background var(--transition-fast);
+    animation: entry-in 0.25s ease-out;
+}
+
+@keyframes entry-in {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+.activity-entry:hover { background: rgba(255, 255, 255, 0.035); }
+
+.activity-entry.system { border-left-color: var(--accent-cyan); }
+.activity-entry.signal { border-left-color: var(--amber); }
+.activity-entry.trade  { border-left-color: var(--green); }
+.activity-entry.error  { border-left-color: var(--red); }
+
+.activity-entry-icon {
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.activity-entry-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.activity-entry-msg {
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.activity-entry-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-top: 1px;
+}
+
+.activity-log-empty {
+    text-align: center;
+    padding: var(--space-2xl) 0;
+    color: var(--text-muted);
+    font-size: 0.82rem;
 }
 
 /* ─── Breakout Level Grid ──────────────────────── */
@@ -1313,28 +1487,10 @@ select.form-input {
 
 /* ─── Visible focus rings (a11y) ──────────────────── */
 .btn:focus-visible,
-.chart-tab:focus-visible,
-.tf-btn:focus-visible,
 .nav-link:focus-visible,
 .confirm-modal button:focus-visible {
     outline: 2px solid var(--accent-cyan, #00d4ff);
     outline-offset: 2px;
-}
-
-/* ─── Live-chart container polish ────────────────── */
-.kline-chart {
-    position: relative;
-    overflow: hidden;
-    border-radius: 0 0 var(--radius-lg, 12px) var(--radius-lg, 12px);
-}
-/* Keep the shimmer subtle while the chart canvas paints */
-.kline-chart.skeleton {
-    background:
-        linear-gradient(90deg,
-            rgba(255,255,255,0.02) 25%,
-            rgba(255,255,255,0.05) 50%,
-            rgba(255,255,255,0.02) 75%);
-    background-size: 200% 100%;
 }
 
 /* ─── Responsive tweaks for the dashboard ────────── */
