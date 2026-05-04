@@ -289,24 +289,28 @@ class DeltaClient:
         limit_price: Optional[str] = None,
         client_order_id: Optional[str] = None,
     ) -> Dict:
-        """Place a conditional order for breakout entry (NOT reduce-only).
+        """Place a conditional STOP order for breakout entry (NOT reduce-only).
 
-        Uses stop_order_type='take_profit_order' because on Delta Exchange:
-          - take_profit_order BUY:  triggers when price >= stop_price (rises to level)
-          - take_profit_order SELL: triggers when price <= stop_price (drops to level)
+        Uses stop_order_type='stop_loss_order' because on Delta Exchange:
+          - stop_loss_order BUY:  triggers when price >= stop_price (rises to level)
+          - stop_loss_order SELL: triggers when price <= stop_price (drops to level)
 
-        This is exactly what a breakout strategy needs: the order sits dormant
-        until price *reaches* the breakout level.
+        This is what a breakout strategy needs: the order sits dormant
+        until price *reaches* the breakout level from inside the range.
 
-        Note: stop_loss_order has the OPPOSITE trigger direction and would
-        cause 'immediate_execution_stop_order' errors for breakout entries.
+        Note: take_profit_order has the OPPOSITE trigger direction:
+          - take_profit_order BUY: triggers when price <= stop_price → immediate exec!
+        
+        IMPORTANT: The stop_price must have sufficient distance from the
+        current ask (for buy) / bid (for sell) or the exchange will reject
+        with 'immediate_execution_stop_order'.
         """
         payload: Dict[str, Any] = {
             "product_id": product_id,
             "size": int(size),
             "side": side,
             "order_type": order_type,
-            "stop_order_type": "take_profit_order",
+            "stop_order_type": "stop_loss_order",
             "stop_price": str(stop_price),
             "reduce_only": "false",
         }

@@ -357,29 +357,48 @@ class BotRunner:
         long_task = None
         short_task = None
 
+        # Minimum distance to avoid immediate_execution on thin order books.
+        # On testnet the spread can be huge, so the ask may already exceed
+        # our breakout level.  Require at least 0.05% distance.
+        min_dist_pct = 0.05 / 100  # 0.05%
+
         if "buy" in allowed_sides:
-            long_task = asyncio.create_task(
-                self.delta_client.place_stop_entry_order(
-                    product_id=product_id,
-                    side="buy",
-                    size=strategy.quantity,
-                    stop_price=high_rounded,
-                    client_order_id=long_coid,
+            dist_pct = (high_rounded - current_price) / current_price
+            if dist_pct > min_dist_pct:
+                long_task = asyncio.create_task(
+                    self.delta_client.place_stop_entry_order(
+                        product_id=product_id,
+                        side="buy",
+                        size=strategy.quantity,
+                        stop_price=high_rounded,
+                        client_order_id=long_coid,
+                    )
                 )
-            )
-            tasks.append(long_task)
+                tasks.append(long_task)
+            else:
+                logger.warning(
+                    f"[{symbol}] BUY stop ${high_rounded:,.2f} too close to "
+                    f"price ${current_price:,.2f} ({dist_pct*100:.3f}%) — skipping"
+                )
 
         if "sell" in allowed_sides:
-            short_task = asyncio.create_task(
-                self.delta_client.place_stop_entry_order(
-                    product_id=product_id,
-                    side="sell",
-                    size=strategy.quantity,
-                    stop_price=low_rounded,
-                    client_order_id=short_coid,
+            dist_pct = (current_price - low_rounded) / current_price
+            if dist_pct > min_dist_pct:
+                short_task = asyncio.create_task(
+                    self.delta_client.place_stop_entry_order(
+                        product_id=product_id,
+                        side="sell",
+                        size=strategy.quantity,
+                        stop_price=low_rounded,
+                        client_order_id=short_coid,
+                    )
                 )
-            )
-            tasks.append(short_task)
+                tasks.append(short_task)
+            else:
+                logger.warning(
+                    f"[{symbol}] SELL stop ${low_rounded:,.2f} too close to "
+                    f"price ${current_price:,.2f} ({dist_pct*100:.3f}%) — skipping"
+                )
 
         if not tasks:
             logger.info(f"[{symbol}] No sides allowed by trend filter — skipping")
