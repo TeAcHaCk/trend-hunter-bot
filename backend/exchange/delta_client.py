@@ -239,7 +239,7 @@ class DeltaClient:
         return await self._request("GET", "/v2/orders/history",
                                    params={"page_size": page_size}, auth=True)
 
-    async def place_order(self, product_id: int, product_symbol: str,
+    async def place_order(self, product_id: int,
                           side: str, size: int,
                           order_type: str = "market_order",
                           limit_price: Optional[str] = None,
@@ -248,35 +248,42 @@ class DeltaClient:
                           time_in_force: Optional[str] = None,
                           post_only: bool = False) -> Dict:
         """
-        Place an order. Pass `client_order_id` to make retries idempotent —
-        Delta will reject a second order with the same ID instead of double-filling.
+        Place an order on Delta Exchange.
+
+        Payload format matches the official delta-rest-client:
+          - product_id (int), size (int), side (str), order_type (str)
+          - reduce_only / post_only as string "true"/"false"
+          - NO product_symbol field (not part of the API spec)
+
+        Pass `client_order_id` to make retries idempotent.
         """
         payload: Dict[str, Any] = {
             "product_id": product_id,
-            "product_symbol": product_symbol,
-            "size": size,
+            "size": int(size),
             "side": side,
             "order_type": order_type,
+            "post_only": "true" if post_only else "false",
+            "reduce_only": "true" if reduce_only else "false",
         }
         if order_type == "limit_order" and limit_price is not None:
-            payload["limit_price"] = limit_price
-        if reduce_only:
-            payload["reduce_only"] = True
+            payload["limit_price"] = str(limit_price)
         if client_order_id:
             payload["client_order_id"] = client_order_id
         if time_in_force:
             payload["time_in_force"] = time_in_force
-        if post_only:
-            payload["post_only"] = True
 
         logger.info(
-            f"Placing order: {side} {size} {product_symbol} ({order_type})"
+            f"Placing order: {side} {size} PID={product_id} ({order_type})"
             + (f" @ {limit_price}" if limit_price else "")
             + (f" coid={client_order_id}" if client_order_id else "")
         )
-        return await self._request("POST", "/v2/orders", data=payload, auth=True)
+        result = await self._request("POST", "/v2/orders", data=payload, auth=True)
+        if not (isinstance(result, dict) and (result.get("success") or result.get("result"))):
+            logger.error(f"Order REJECTED by exchange: {result}")
+        return result
 
-    async def cancel_order(self, order_id: int, product_id: int) -> Dict:
+    async def cancel_order(self, product_id: int, order_id: int) -> Dict:
+        """Cancel an open order. Arg order matches official client: (product_id, order_id)."""
         payload = {"id": order_id, "product_id": product_id}
         return await self._request("DELETE", "/v2/orders", data=payload, auth=True)
 
@@ -284,12 +291,12 @@ class DeltaClient:
         payload = {"product_id": product_id} if product_id else {}
         return await self._request("DELETE", "/v2/orders/all", data=payload, auth=True)
 
-    async def close_position(self, product_id: int, product_symbol: str,
+    async def close_position(self, product_id: int,
                              current_side: str, size: int) -> Dict:
+        """Market-close an existing position."""
         close_side = "sell" if current_side == "LONG" else "buy"
         return await self.place_order(
             product_id=product_id,
-            product_symbol=product_symbol,
             side=close_side,
             size=size,
             order_type="market_order",
@@ -297,7 +304,6 @@ class DeltaClient:
         )
 
     async def place_bracket_order(self, product_id: int,
-                                  product_symbol: str,
                                   stop_loss_price: float,
                                   take_profit_price: float,
                                   trail_amount: Optional[float] = None,
@@ -322,7 +328,6 @@ class DeltaClient:
 
         payload: Dict[str, Any] = {
             "product_id": product_id,
-            "product_symbol": product_symbol,
             "stop_loss_order": sl_order,
             "take_profit_order": tp_order,
             "bracket_stop_trigger_method": bracket_stop_trigger_method,
@@ -333,7 +338,7 @@ class DeltaClient:
         )
         return await self._request("PUT", "/v2/orders/bracket", data=payload, auth=True)
 
-    async def place_stop_order(self, product_id: int, product_symbol: str,
+    async def place_stop_order(self, product_id: int,
                                side: str, size: int,
                                stop_price: float,
                                order_type: str = "market_order",
@@ -341,21 +346,20 @@ class DeltaClient:
         """Place an individual stop-loss order as a fallback."""
         payload: Dict[str, Any] = {
             "product_id": product_id,
-            "product_symbol": product_symbol,
-            "size": size,
+            "size": int(size),
             "side": side,
             "order_type": order_type,
             "stop_order_type": "stop_loss_order",
             "stop_price": str(stop_price),
-            "reduce_only": True,
+            "reduce_only": "true",
         }
         if order_type == "limit_order" and limit_price:
-            payload["limit_price"] = limit_price
+            payload["limit_price"] = str(limit_price)
 
-        logger.info(f"Placing stop-loss order | {side} {size} {product_symbol} @ stop={stop_price}")
+        logger.info(f"Placing stop-loss order | {side} {size} PID={product_id} @ stop={stop_price}")
         return await self._request("POST", "/v2/orders", data=payload, auth=True)
 
-    async def place_take_profit_order(self, product_id: int, product_symbol: str,
+    async def place_take_profit_order(self, product_id: int,
                                       side: str, size: int,
                                       stop_price: float,
                                       order_type: str = "market_order",
@@ -363,18 +367,17 @@ class DeltaClient:
         """Place an individual take-profit order as a fallback."""
         payload: Dict[str, Any] = {
             "product_id": product_id,
-            "product_symbol": product_symbol,
-            "size": size,
+            "size": int(size),
             "side": side,
             "order_type": order_type,
             "stop_order_type": "take_profit_order",
             "stop_price": str(stop_price),
-            "reduce_only": True,
+            "reduce_only": "true",
         }
         if order_type == "limit_order" and limit_price:
-            payload["limit_price"] = limit_price
+            payload["limit_price"] = str(limit_price)
 
-        logger.info(f"Placing take-profit order | {side} {size} {product_symbol} @ stop={stop_price}")
+        logger.info(f"Placing take-profit order | {side} {size} PID={product_id} @ stop={stop_price}")
         return await self._request("POST", "/v2/orders", data=payload, auth=True)
 
     async def get_order_by_id(self, order_id: int) -> Dict:
@@ -384,8 +387,12 @@ class DeltaClient:
         return await self.cancel_all_orders(product_id=product_id)
 
     async def set_leverage(self, product_id: int, leverage: int) -> Dict:
-        payload = {"product_id": product_id, "leverage": str(leverage)}
-        return await self._request("POST", "/v2/orders/leverage", data=payload, auth=True)
+        """Set leverage for a product. URL matches official client."""
+        payload = {"leverage": str(leverage)}
+        return await self._request(
+            "POST", f"/v2/products/{product_id}/orders/leverage",
+            data=payload, auth=True,
+        )
 
     # ─── Utility Methods ──────────────────────
 

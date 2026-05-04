@@ -317,7 +317,6 @@ class BotRunner:
 
         long_task = asyncio.create_task(self.delta_client.place_order(
             product_id=product_id,
-            product_symbol=symbol,
             side="buy",
             size=strategy.quantity,
             order_type="limit_order",
@@ -327,7 +326,6 @@ class BotRunner:
         ))
         short_task = asyncio.create_task(self.delta_client.place_order(
             product_id=product_id,
-            product_symbol=symbol,
             side="sell",
             size=strategy.quantity,
             order_type="limit_order",
@@ -447,7 +445,7 @@ class BotRunner:
             cancel_tasks = []
             if other_order_id:
                 cancel_tasks.append(asyncio.create_task(
-                    self.delta_client.cancel_order(other_order_id, product_id)
+                    self.delta_client.cancel_order(product_id, other_order_id)
                 ))
             if cancel_tasks:
                 await asyncio.gather(*cancel_tasks, return_exceptions=True)
@@ -456,7 +454,6 @@ class BotRunner:
             bracket_ok = await self._place_bracket_with_fallback(
                 symbol=symbol,
                 product_id=product_id,
-                product_symbol=symbol,
                 direction=direction,
                 size=abs(actual_size),
                 sl_price=sl_price,
@@ -468,7 +465,6 @@ class BotRunner:
                              f"emergency closing position")
                 await self.delta_client.close_position(
                     product_id=product_id,
-                    product_symbol=symbol,
                     current_side=direction,
                     size=abs(actual_size),
                 )
@@ -499,7 +495,7 @@ class BotRunner:
             self._fill_in_progress[symbol] = False
 
     async def _place_bracket_with_fallback(
-        self, symbol: str, product_id: int, product_symbol: str,
+        self, symbol: str, product_id: int,
         direction: str, size: int, sl_price: float, tp_price: float,
     ) -> bool:
         """Try bracket order; on failure, fall back to individual SL + TP orders.
@@ -510,7 +506,6 @@ class BotRunner:
         try:
             bracket_result = await self.delta_client.place_bracket_order(
                 product_id=product_id,
-                product_symbol=product_symbol,
                 stop_loss_price=sl_price,
                 take_profit_price=tp_price,
             )
@@ -533,7 +528,6 @@ class BotRunner:
         try:
             sl_result = await self.delta_client.place_stop_order(
                 product_id=product_id,
-                product_symbol=product_symbol,
                 side=close_side,
                 size=size,
                 stop_price=sl_price,
@@ -551,7 +545,6 @@ class BotRunner:
         try:
             tp_result = await self.delta_client.place_take_profit_order(
                 product_id=product_id,
-                product_symbol=product_symbol,
                 side=close_side,
                 size=size,
                 stop_price=tp_price,
@@ -577,7 +570,7 @@ class BotRunner:
         for order_id in (strategy._long_order_id, strategy._short_order_id):
             if order_id:
                 cancel_tasks.append(asyncio.create_task(
-                    self.delta_client.cancel_order(order_id, product_id)
+                    self.delta_client.cancel_order(product_id, order_id)
                 ))
 
         if cancel_tasks:
@@ -832,7 +825,6 @@ class BotRunner:
                             await self._place_bracket_with_fallback(
                                 symbol=sym,
                                 product_id=product_id,
-                                product_symbol=sym,
                                 direction=direction,
                                 size=size,
                                 sl_price=sl,
