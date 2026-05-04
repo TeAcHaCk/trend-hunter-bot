@@ -223,6 +223,11 @@ class BotRunner:
                     price = self._get_price(symbol)
                     if price:
                         strategy.last_price = price
+                    else:
+                        price = strategy.last_price or 0
+                    if not price:
+                        logger.warning(f"[{symbol}] No price — skipping position monitor")
+                        return
                     await self._monitor_position(symbol, strategy, price)
                     return
 
@@ -448,13 +453,22 @@ class BotRunner:
         # Still pending — log progress
         elapsed = int(time.time() - strategy._orders_placed_time)
         remaining = max(0, strategy._order_expiry_seconds - elapsed)
-        dist_high = strategy._breakout_high - current_price if strategy._breakout_high else 0
-        dist_low = current_price - strategy._breakout_low if strategy._breakout_low else 0
-        logger.info(
-            f"[{symbol}] ${current_price:,.2f} | PENDING ({remaining}s) | "
-            f"BUY @ ${strategy._breakout_high:,.2f} (-${dist_high:,.2f}) | "
-            f"SELL @ ${strategy._breakout_low:,.2f} (-${dist_low:,.2f})"
-        )
+        bh = strategy._breakout_high
+        bl = strategy._breakout_low
+        if bh is not None and bl is not None and current_price:
+            dist_high = bh - current_price
+            dist_low = current_price - bl
+            logger.info(
+                f"[{symbol}] ${current_price:,.2f} | PENDING ({remaining}s) | "
+                f"BUY @ ${bh:,.2f} (-${dist_high:,.2f}) | "
+                f"SELL @ ${bl:,.2f} (-${dist_low:,.2f})"
+            )
+        else:
+            logger.info(
+                f"[{symbol}] PENDING ({remaining}s) — levels not yet computed, "
+                f"forcing candle refresh"
+            )
+            self._last_candle_time[symbol] = 0  # force refresh
 
     async def _handle_fill(self, symbol: str,
                            strategy: TrendHunterStrategy,
