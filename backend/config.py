@@ -80,10 +80,10 @@ class Settings:
         self.APP_SECRET_KEY: str = os.getenv("APP_SECRET_KEY", "default-secret-key")
 
         # Environment: "demo" | "testnet" | "production"
-        # "demo" = Global testnet at demo.delta.exchange (DEFAULT)
-        # "testnet" = India testnet at testnet.delta.exchange
+        # "demo" = Global testnet at demo.delta.exchange
+        # "testnet" = India testnet at testnet.delta.exchange (DEFAULT)
         # "production" = India production at india.delta.exchange
-        self.DELTA_ENVIRONMENT: str = os.getenv("DELTA_ENVIRONMENT", "demo").lower()
+        self.DELTA_ENVIRONMENT: str = os.getenv("DELTA_ENVIRONMENT", "testnet").lower()
 
         # Backward compat: DELTA_TESTNET=true → "testnet", false → "production"
         legacy_testnet = os.getenv("DELTA_TESTNET")
