@@ -282,6 +282,46 @@ class DeltaClient:
             logger.error(f"Order REJECTED by exchange: {result}")
         return result
 
+    async def place_stop_entry_order(
+        self, product_id: int, side: str, size: int,
+        stop_price: float,
+        order_type: str = "market_order",
+        limit_price: Optional[str] = None,
+        client_order_id: Optional[str] = None,
+    ) -> Dict:
+        """Place a STOP order for breakout entry (NOT reduce-only).
+
+        Unlike a limit order which fills immediately when the limit price
+        is better than market, a stop order sits dormant until price
+        *reaches* the stop_price — exactly what a breakout strategy needs.
+
+        On Delta Exchange this uses stop_order_type='stop_loss_order' with
+        reduce_only='false' to allow opening a new position.
+        """
+        payload: Dict[str, Any] = {
+            "product_id": product_id,
+            "size": int(size),
+            "side": side,
+            "order_type": order_type,
+            "stop_order_type": "stop_loss_order",
+            "stop_price": str(stop_price),
+            "reduce_only": "false",
+        }
+        if order_type == "limit_order" and limit_price is not None:
+            payload["limit_price"] = str(limit_price)
+        if client_order_id:
+            payload["client_order_id"] = client_order_id
+
+        logger.info(
+            f"Placing STOP {side.upper()} entry | PID={product_id} | "
+            f"stop={stop_price} | size={size}"
+            + (f" | coid={client_order_id}" if client_order_id else "")
+        )
+        result = await self._request("POST", "/v2/orders", data=payload, auth=True)
+        if not (isinstance(result, dict) and (result.get("success") or result.get("result"))):
+            logger.error(f"Stop entry order REJECTED: {result}")
+        return result
+
     async def cancel_order(self, product_id: int, order_id: int) -> Dict:
         """Cancel an open order. Arg order matches official client: (product_id, order_id)."""
         payload = {"id": order_id, "product_id": product_id}
@@ -336,6 +376,28 @@ class DeltaClient:
         logger.info(
             f"Placing bracket (PUT) | PID={product_id} | SL={stop_loss_price} | TP={take_profit_price}"
         )
+        return await self._request("PUT", "/v2/orders/bracket", data=payload, auth=True)
+
+    async def edit_bracket_order(self, product_id: int,
+                                 stop_loss_price: Optional[float] = None,
+                                 take_profit_price: Optional[float] = None,
+                                 bracket_stop_trigger_method: str = "last_traded_price") -> Dict:
+        """Edit an existing bracket SL/TP on a position (PUT /v2/orders/bracket)."""
+        payload: Dict[str, Any] = {
+            "product_id": product_id,
+            "bracket_stop_trigger_method": bracket_stop_trigger_method,
+        }
+        if stop_loss_price is not None:
+            payload["stop_loss_order"] = {
+                "order_type": "market_order",
+                "stop_price": str(stop_loss_price),
+            }
+        if take_profit_price is not None:
+            payload["take_profit_order"] = {
+                "order_type": "market_order",
+                "stop_price": str(take_profit_price),
+            }
+        logger.info(f"Editing bracket | PID={product_id} | SL={stop_loss_price} | TP={take_profit_price}")
         return await self._request("PUT", "/v2/orders/bracket", data=payload, auth=True)
 
     async def place_stop_order(self, product_id: int,

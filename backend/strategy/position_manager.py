@@ -3,7 +3,9 @@ Position Manager — Manages position lifecycle and safety guards.
 """
 import logging
 from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import Optional, Dict
+import math
 
 from backend.exchange.delta_client import DeltaClient
 
@@ -30,9 +32,10 @@ class PositionManager:
         self.max_daily_loss: float = 100.0
         self.leverage: int = 10
 
-        # Product ID and contract value cache
+        # Product ID, contract value, and tick size cache
         self._product_ids: Dict[str, int] = {}
         self._contract_values: Dict[str, float] = {}
+        self._tick_sizes: Dict[str, float] = {}
 
     def set_product_id(self, symbol: str, product_id: int):
         self._product_ids[symbol] = product_id
@@ -49,6 +52,11 @@ class PositionManager:
                 cv = product.get("contract_value")
                 if cv:
                     self._contract_values[symbol] = float(cv)
+                # Cache tick_size for price rounding
+                ts = product.get("tick_size")
+                if ts:
+                    self._tick_sizes[symbol] = float(ts)
+                    logger.info(f"[{symbol}] Cached tick_size={ts}, contract_value={cv}")
         return self._product_ids.get(symbol)
 
     def get_contract_value(self, symbol: str) -> float:
@@ -62,6 +70,33 @@ class PositionManager:
         # Sensible defaults matching Delta Exchange India
         defaults = {"BTCUSD": 0.001, "ETHUSD": 0.01}
         return defaults.get(symbol, 0.001)
+
+    def round_to_tick(self, symbol: str, price: float,
+                      direction: str = "nearest") -> float:
+        """Round a price to the valid tick grid for a symbol.
+
+        direction:
+          'up'      — ceil to next tick (for stop-buy entries)
+          'down'    — floor to prev tick (for stop-sell entries)
+          'nearest' — round to nearest tick
+
+        Falls back to 2 decimal places if tick_size not cached.
+        """
+        tick = self._tick_sizes.get(symbol)
+        if not tick or tick <= 0:
+            return round(price, 2)
+
+        if direction == "up":
+            rounded = math.ceil(price / tick) * tick
+        elif direction == "down":
+            rounded = math.floor(price / tick) * tick
+        else:
+            rounded = round(price / tick) * tick
+
+        # Determine decimal places from tick_size
+        tick_str = format(Decimal(repr(float(tick))), 'f')
+        decimals = len(tick_str.split('.')[1]) if '.' in tick_str else 0
+        return round(rounded, decimals)
 
     def check_cooldown(self, symbol: str) -> bool:
         last_trade = self._last_trade_time.get(symbol)

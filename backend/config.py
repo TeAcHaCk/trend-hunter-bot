@@ -27,23 +27,30 @@ class Settings:
         "eth_enabled": True,
         "btc_quantity": 10,
         "eth_quantity": 10,
-        "breakout_buffer_pct": 0.1,
-        "cooldown_minutes": 5,
+        "breakout_buffer_pct": 0.05,
+        "cooldown_minutes": 3,
         "max_daily_loss": 100.0,
         "leverage": 10,
         # Faster default poll — REST is async now, so this is cheap
         "poll_interval_seconds": 3,
-        "candle_resolution": "15m",
-        "lookback_candles": 6,
+        "candle_resolution": "5m",
+        "lookback_candles": 8,
         # ATR-based bracket exits (with sensible bounds)
-        "sl_atr_mult": 1.0,
-        "tp_atr_mult": 1.5,
+        "sl_atr_mult": 1.5,
+        "tp_atr_mult": 2.5,
         "min_sl_pct": 0.15,
         "max_sl_pct": 1.5,
         # Filters
-        "require_volume_confirmation": False,
-        # How long pending limit orders live before being cancelled & re-armed
-        "order_expiry_seconds": 1800,
+        "require_volume_confirmation": True,
+        # How long pending stop orders live before being cancelled & re-armed
+        "order_expiry_seconds": 600,
+        # EMA trend filter
+        "ema_period": 20,
+        # Minimum range spread % to avoid noise breakouts
+        "min_range_pct": 0.08,
+        # Trailing stop-loss
+        "use_trailing_sl": True,
+        "trail_activation_pct": 0.15,
     }
 
     def __init__(self):

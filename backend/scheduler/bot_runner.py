@@ -3,7 +3,11 @@ Bot Runner — Async execution loop for the Trend Hunter strategy.
 
 Major improvements:
   * Async REST → no event-loop blocking on order/cancel/position calls.
-  * Parallel BUY/SELL limit-order placement (asyncio.gather) ⇒ ~½ entry latency.
+  * STOP entry orders (not limit) → orders wait for price to reach breakout level.
+  * EMA trend filter → only trade breakouts WITH the trend.
+  * Range-squeeze filter → skip noise / tiny ranges.
+  * Trailing stop-loss → locks in profits as price moves favorably.
+  * Parallel BUY/SELL stop-order placement (asyncio.gather) ⇒ ~½ entry latency.
   * Idempotent order placement via client_order_id.
   * Instant fill detection through the private `orders` WS channel
     (falls back to polling if the channel is unavailable).
@@ -71,27 +75,33 @@ class BotRunner:
 
         # Tunables
         self.poll_interval_seconds: int = 3
-        self.candle_resolution: str = "15m"
-        self.lookback_candles: int = 6
+        self.candle_resolution: str = "5m"
+        self.lookback_candles: int = 8
+        self.ema_period: int = 20
 
     # ── Initialisation & settings ─────────────────────────────────
 
     def initialize(self, bot_settings: Dict = None):
         s = bot_settings or settings.DEFAULT_SETTINGS
 
-        self.candle_resolution = s.get("candle_resolution", "15m")
-        self.lookback_candles = s.get("lookback_candles", 6)
+        self.candle_resolution = s.get("candle_resolution", "5m")
+        self.lookback_candles = s.get("lookback_candles", 8)
+        self.ema_period = int(s.get("ema_period", 20))
         # Faster default poll — async, so this is cheap
         self.poll_interval_seconds = int(s.get("poll_interval_seconds", 3))
 
         common_kwargs = {
-            "breakout_buffer_pct": s.get("breakout_buffer_pct", 0.1),
-            "sl_atr_mult": s.get("sl_atr_mult", 1.0),
-            "tp_atr_mult": s.get("tp_atr_mult", 1.5),
+            "breakout_buffer_pct": s.get("breakout_buffer_pct", 0.05),
+            "sl_atr_mult": s.get("sl_atr_mult", 1.5),
+            "tp_atr_mult": s.get("tp_atr_mult", 2.5),
             "min_sl_pct": s.get("min_sl_pct", 0.15),
             "max_sl_pct": s.get("max_sl_pct", 1.5),
-            "require_volume_confirmation": s.get("require_volume_confirmation", False),
-            "order_expiry_seconds": int(s.get("order_expiry_seconds", 1800)),
+            "require_volume_confirmation": s.get("require_volume_confirmation", True),
+            "order_expiry_seconds": int(s.get("order_expiry_seconds", 600)),
+            "ema_period": self.ema_period,
+            "min_range_pct": s.get("min_range_pct", 0.08),
+            "use_trailing_sl": s.get("use_trailing_sl", True),
+            "trail_activation_pct": s.get("trail_activation_pct", 0.15),
         }
 
         # BTC
@@ -123,7 +133,7 @@ class BotRunner:
         elif "ETHUSD" in self.strategies:
             self.strategies["ETHUSD"].enabled = False
 
-        self.position_manager.cooldown_minutes = s.get("cooldown_minutes", 5)
+        self.position_manager.cooldown_minutes = s.get("cooldown_minutes", 3)
         self.position_manager.max_daily_loss = s.get("max_daily_loss", 100.0)
         self.position_manager.leverage = s.get("leverage", 10)
 
@@ -134,7 +144,8 @@ class BotRunner:
         self._initialized = True
         logger.info(
             f"Bot initialized | Candles: {self.lookback_candles}x {self.candle_resolution} | "
-            f"Buffer: {s.get('breakout_buffer_pct', 0.1)}% | Poll: {self.poll_interval_seconds}s"
+            f"EMA: {self.ema_period} | Buffer: {s.get('breakout_buffer_pct', 0.05)}% | "
+            f"Poll: {self.poll_interval_seconds}s"
         )
 
     def update_client(self, api_key: str, api_secret: str):
@@ -243,6 +254,9 @@ class BotRunner:
                     logger.info(f"[{symbol}] Skipping — volume below confirmation threshold")
                     return
 
+                if not strategy.passes_range_filter():
+                    return
+
                 await self._place_breakout_orders(symbol, strategy, price)
 
             except Exception as e:
@@ -263,10 +277,13 @@ class BotRunner:
         if last_fetch_time > 0 and (now - last_fetch_time) < interval:
             return
 
+        # Fetch enough candles for both range calculation AND EMA
+        num_candles = max(self.lookback_candles, self.ema_period + 2)
+
         candles = await self.delta_client.get_candles(
             symbol=symbol,
             resolution=self.candle_resolution,
-            num_candles=self.lookback_candles,
+            num_candles=num_candles,
         )
         if not candles or len(candles) < 2:
             return
@@ -275,7 +292,9 @@ class BotRunner:
         if newest_time != last_fetch_time:
             self._cached_candles[symbol] = candles
             self._last_candle_time[symbol] = newest_time
-            strategy.update_levels_from_candles(candles)
+            strategy.update_levels_from_candles(
+                candles, lookback=self.lookback_candles
+            )
             logger.info(
                 f"[{symbol}] Levels refreshed | new candle @ {newest_time} | "
                 f"locked for next {self.candle_resolution}"
@@ -307,55 +326,77 @@ class BotRunner:
             self._last_candle_time[symbol] = 0
             return
 
+        # EMA trend filter: only place orders in the trend direction
+        allowed_sides = strategy.get_allowed_sides()
+
+        # Tick-size rounding
+        high_rounded = self.position_manager.round_to_tick(symbol, high, "up")
+        low_rounded = self.position_manager.round_to_tick(symbol, low, "down")
+
         long_coid = self._new_coid(symbol, "buy")
         short_coid = self._new_coid(symbol, "sell")
 
+        sides_str = "/".join(s.upper() for s in allowed_sides)
         logger.info(
-            f"[{symbol}] Arming breakout | BUY @ ${high:,.2f} | SELL @ ${low:,.2f} | "
-            f"Now: ${current_price:,.2f}"
+            f"[{symbol}] Arming STOP breakout ({sides_str}) | "
+            f"BUY stop @ ${high_rounded:,.2f} | SELL stop @ ${low_rounded:,.2f} | "
+            f"Now: ${current_price:,.2f} | Trend: {strategy._trend}"
         )
 
-        long_task = asyncio.create_task(self.delta_client.place_order(
-            product_id=product_id,
-            side="buy",
-            size=strategy.quantity,
-            order_type="limit_order",
-            limit_price=str(round(high, 2)),
-            client_order_id=long_coid,
-            time_in_force="gtc",
-        ))
-        short_task = asyncio.create_task(self.delta_client.place_order(
-            product_id=product_id,
-            side="sell",
-            size=strategy.quantity,
-            order_type="limit_order",
-            limit_price=str(round(low, 2)),
-            client_order_id=short_coid,
-            time_in_force="gtc",
-        ))
-        long_result, short_result = await asyncio.gather(long_task, short_task,
-                                                         return_exceptions=True)
+        tasks = []
+        long_task = None
+        short_task = None
 
-        long_order_id = self._extract_order_id(long_result)
-        short_order_id = self._extract_order_id(short_result)
+        if "buy" in allowed_sides:
+            long_task = asyncio.create_task(
+                self.delta_client.place_stop_entry_order(
+                    product_id=product_id,
+                    side="buy",
+                    size=strategy.quantity,
+                    stop_price=high_rounded,
+                    client_order_id=long_coid,
+                )
+            )
+            tasks.append(long_task)
 
-        if not long_order_id:
-            logger.error(f"[{symbol}] Limit BUY FAILED: {long_result}")
-        if not short_order_id:
-            logger.error(f"[{symbol}] Limit SELL FAILED: {short_result}")
+        if "sell" in allowed_sides:
+            short_task = asyncio.create_task(
+                self.delta_client.place_stop_entry_order(
+                    product_id=product_id,
+                    side="sell",
+                    size=strategy.quantity,
+                    stop_price=low_rounded,
+                    client_order_id=short_coid,
+                )
+            )
+            tasks.append(short_task)
+
+        if not tasks:
+            logger.info(f"[{symbol}] No sides allowed by trend filter — skipping")
+            return
+
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+        long_order_id = self._extract_order_id(long_task.result() if long_task else None) if long_task else None
+        short_order_id = self._extract_order_id(short_task.result() if short_task else None) if short_task else None
+
+        if long_task and not long_order_id:
+            logger.error(f"[{symbol}] STOP BUY FAILED: {long_task.result() if long_task else 'skipped'}")
+        if short_task and not short_order_id:
+            logger.error(f"[{symbol}] STOP SELL FAILED: {short_task.result() if short_task else 'skipped'}")
 
         if long_order_id or short_order_id:
             strategy.record_orders_placed(
                 long_order_id=long_order_id,
                 short_order_id=short_order_id,
-                long_coid=long_coid,
-                short_coid=short_coid,
+                long_coid=long_coid if long_order_id else None,
+                short_coid=short_coid if short_order_id else None,
             )
             self.total_signals += 1
             self.daily_signals += 1
             await self._persist_state()
         else:
-            logger.error(f"[{symbol}] Both limit orders failed — will retry next cycle")
+            logger.error(f"[{symbol}] All stop orders failed — will retry next cycle")
 
     @staticmethod
     def _extract_order_id(result: Any) -> Optional[int]:
@@ -617,6 +658,21 @@ class BotRunner:
             f"Now: ${current_price:,.2f} | uPnL: ${unrealised:,.2f} | "
             f"SL: ${strategy._stop_loss:,.2f} | TP: ${strategy._take_profit:,.2f}"
         )
+
+        # ── Trailing stop-loss ──
+        new_sl = strategy.calculate_trailing_sl(current_price)
+        if new_sl is not None:
+            try:
+                rounded_sl = self.position_manager.round_to_tick(
+                    symbol, new_sl, "nearest"
+                )
+                await self.delta_client.edit_bracket_order(
+                    product_id=product_id,
+                    stop_loss_price=rounded_sl,
+                )
+                logger.info(f"[{symbol}] Trailing SL updated on exchange to ${rounded_sl:,.2f}")
+            except Exception as e:
+                logger.warning(f"[{symbol}] Trailing SL update failed: {e}")
 
     async def _on_position_closed(self, symbol: str,
                                   strategy: TrendHunterStrategy,
