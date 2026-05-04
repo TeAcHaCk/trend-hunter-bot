@@ -23,25 +23,29 @@ class StrategySettingsRequest(BaseModel):
     eth_enabled: bool = True
     btc_quantity: int = 10
     eth_quantity: int = 10
-    breakout_buffer_pct: float = 0.1
-    cooldown_minutes: int = 5
+    breakout_buffer_pct: float = 0.05
+    cooldown_minutes: int = 3
     max_daily_loss: float = 100.0
     leverage: int = 10
-    candle_resolution: str = "15m"
-    lookback_candles: int = 6
+    candle_resolution: str = "5m"
+    lookback_candles: int = 8
     poll_interval_seconds: int = 3
-    sl_atr_mult: float = 1.0
-    tp_atr_mult: float = 1.5
+    sl_atr_mult: float = 1.5
+    tp_atr_mult: float = 2.5
     min_sl_pct: float = 0.15
     max_sl_pct: float = 1.5
     require_volume_confirmation: bool = False
-    order_expiry_seconds: int = 1800
+    order_expiry_seconds: int = 600
+    ema_period: int = 20
+    min_range_pct: float = 0.08
+    use_trailing_sl: bool = True
+    trail_activation_pct: float = 0.15
 
 
 class ApiKeysRequest(BaseModel):
     api_key: str
     api_secret: str
-    testnet: bool = True
+    environment: str = "demo"  # "demo" | "testnet" | "production"
 
 
 @router.get("")
@@ -53,7 +57,7 @@ async def get_settings():
             "success": True,
             "result": {
                 **saved,
-                "testnet": settings.DELTA_TESTNET,
+                "environment": settings.DELTA_ENVIRONMENT,
                 "has_api_key": bool(settings.DELTA_API_KEY),
                 "rest_url": settings.rest_url,
             }
@@ -87,19 +91,19 @@ async def update_api_keys(req: ApiKeysRequest):
         # Update in-memory settings
         settings.DELTA_API_KEY = req.api_key
         settings.DELTA_API_SECRET = req.api_secret
-        settings.DELTA_TESTNET = req.testnet
+        settings.DELTA_ENVIRONMENT = req.environment
 
         # Update bot client
         bot_runner.update_client(req.api_key, req.api_secret)
 
         # Save to database (encrypted in production, plain for now)
         await _save_setting("api_key_configured", "true")
-        await _save_setting("testnet", str(req.testnet).lower())
+        await _save_setting("environment", req.environment)
 
         return {
             "success": True,
             "message": "API keys updated",
-            "testnet": req.testnet,
+            "environment": req.environment,
             "rest_url": settings.rest_url,
         }
     except Exception as e:
@@ -123,7 +127,7 @@ async def test_connection():
                 "success": True,
                 "message": "Connection successful!",
                 "balances": balances,
-                "testnet": settings.DELTA_TESTNET,
+                "environment": settings.DELTA_ENVIRONMENT,
             }
         else:
             error = result.get("error", {})

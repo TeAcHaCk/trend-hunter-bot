@@ -1080,7 +1080,7 @@ class BotRunner:
             "strategies": strategies_status,
             "position_manager": self.position_manager.get_status(),
             "prices": delta_ws.price_cache,
-            "testnet": settings.DELTA_TESTNET,
+            "environment": settings.DELTA_ENVIRONMENT,
         }
 
 

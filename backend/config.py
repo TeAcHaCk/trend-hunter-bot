@@ -14,12 +14,18 @@ load_dotenv(_project_root / ".env", override=True)
 class Settings:
     """Application settings loaded from environment variables."""
 
-    # Delta Exchange India URLs
+    # Delta Exchange URLs by environment
+    # Production (India)
     PROD_REST_URL = "https://api.india.delta.exchange"
-    TESTNET_REST_URL = "https://cdn-ind.testnet.deltaex.org"
-
     PROD_WS_URL = "wss://socket.india.delta.exchange"
+
+    # Testnet India (testnet.delta.exchange)
+    TESTNET_REST_URL = "https://cdn-ind.testnet.deltaex.org"
     TESTNET_WS_URL = "wss://socket.testnet.deltaex.org"
+
+    # Demo / Global Testnet (demo.delta.exchange)
+    DEMO_REST_URL = "https://testnet-api.delta.exchange"
+    DEMO_WS_URL = "wss://testnet-socket.delta.exchange"
 
     # Default Strategy Settings
     DEFAULT_SETTINGS = {
@@ -62,21 +68,41 @@ class Settings:
         """Load/reload settings from environment variables."""
         self.DELTA_API_KEY: str = os.getenv("DELTA_API_KEY", "")
         self.DELTA_API_SECRET: str = os.getenv("DELTA_API_SECRET", "")
-        self.DELTA_TESTNET: bool = os.getenv("DELTA_TESTNET", "true").lower() == "true"
         self.TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
         self.TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
         self.APP_SECRET_KEY: str = os.getenv("APP_SECRET_KEY", "default-secret-key")
 
+        # Environment: "demo" | "testnet" | "production"
+        # "demo" = Global testnet at demo.delta.exchange (DEFAULT)
+        # "testnet" = India testnet at testnet.delta.exchange
+        # "production" = India production at india.delta.exchange
+        self.DELTA_ENVIRONMENT: str = os.getenv("DELTA_ENVIRONMENT", "demo").lower()
+
+        # Backward compat: DELTA_TESTNET=true → "testnet", false → "production"
+        legacy_testnet = os.getenv("DELTA_TESTNET")
+        if legacy_testnet is not None and not os.getenv("DELTA_ENVIRONMENT"):
+            self.DELTA_ENVIRONMENT = "testnet" if legacy_testnet.lower() == "true" else "production"
+
         key_hint = '***' + self.DELTA_API_KEY[-4:] if len(self.DELTA_API_KEY) > 4 else '(empty)'
-        print(f"[Config] Loaded | Key: {key_hint} | Testnet: {self.DELTA_TESTNET} | URL: {self.rest_url}")
+        print(f"[Config] Loaded | Key: {key_hint} | Env: {self.DELTA_ENVIRONMENT} | URL: {self.rest_url}")
 
     @property
     def rest_url(self) -> str:
-        return self.TESTNET_REST_URL if self.DELTA_TESTNET else self.PROD_REST_URL
+        if self.DELTA_ENVIRONMENT == "production":
+            return self.PROD_REST_URL
+        elif self.DELTA_ENVIRONMENT == "testnet":
+            return self.TESTNET_REST_URL
+        else:  # "demo" (default)
+            return self.DEMO_REST_URL
 
     @property
     def ws_url(self) -> str:
-        return self.TESTNET_WS_URL if self.DELTA_TESTNET else self.PROD_WS_URL
+        if self.DELTA_ENVIRONMENT == "production":
+            return self.PROD_WS_URL
+        elif self.DELTA_ENVIRONMENT == "testnet":
+            return self.TESTNET_WS_URL
+        else:  # "demo" (default)
+            return self.DEMO_WS_URL
 
     def update_from_env(self):
         """Reload settings from environment."""
