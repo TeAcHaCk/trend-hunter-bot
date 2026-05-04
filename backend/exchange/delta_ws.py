@@ -185,7 +185,8 @@ class DeltaWebSocket:
         if symbols is not None:
             self._symbols = symbols
         elif not self._symbols:
-            self._symbols = ["BTCUSD", "ETHUSD"]
+            syms = settings.get_symbols()
+            self._symbols = [syms["btc"], syms["eth"]]
 
         self._running = True
         self._reconnect_delay = 1

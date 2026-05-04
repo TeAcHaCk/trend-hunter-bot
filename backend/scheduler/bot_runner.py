@@ -104,34 +104,39 @@ class BotRunner:
             "trail_activation_pct": s.get("trail_activation_pct", 0.15),
         }
 
+        # Environment-aware symbols (India = USD-inverse, Demo = USDT-linear)
+        syms = settings.get_symbols()
+        btc_sym = syms["btc"]
+        eth_sym = syms["eth"]
+
         # BTC
         if s.get("btc_enabled", True):
-            existing = self.strategies.get("BTCUSD")
+            existing = self.strategies.get(btc_sym)
             new_strat = TrendHunterStrategy(
-                symbol="BTCUSD",
+                symbol=btc_sym,
                 quantity=s.get("btc_quantity", 10),
                 **common_kwargs,
             )
             if existing:
                 # Preserve open trade / orders state across re-initialisation
                 new_strat.restore(existing.snapshot())
-            self.strategies["BTCUSD"] = new_strat
-        elif "BTCUSD" in self.strategies:
-            self.strategies["BTCUSD"].enabled = False
+            self.strategies[btc_sym] = new_strat
+        elif btc_sym in self.strategies:
+            self.strategies[btc_sym].enabled = False
 
         # ETH
         if s.get("eth_enabled", True):
-            existing = self.strategies.get("ETHUSD")
+            existing = self.strategies.get(eth_sym)
             new_strat = TrendHunterStrategy(
-                symbol="ETHUSD",
+                symbol=eth_sym,
                 quantity=s.get("eth_quantity", 10),
                 **common_kwargs,
             )
             if existing:
                 new_strat.restore(existing.snapshot())
-            self.strategies["ETHUSD"] = new_strat
-        elif "ETHUSD" in self.strategies:
-            self.strategies["ETHUSD"].enabled = False
+            self.strategies[eth_sym] = new_strat
+        elif eth_sym in self.strategies:
+            self.strategies[eth_sym].enabled = False
 
         self.position_manager.cooldown_minutes = s.get("cooldown_minutes", 3)
         self.position_manager.max_daily_loss = s.get("max_daily_loss", 100.0)

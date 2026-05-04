@@ -67,8 +67,11 @@ class PositionManager:
         """
         if symbol in self._contract_values:
             return self._contract_values[symbol]
-        # Sensible defaults matching Delta Exchange India
-        defaults = {"BTCUSD": 0.001, "ETHUSD": 0.01}
+        # Sensible defaults matching Delta Exchange
+        defaults = {
+            "BTCUSD": 0.001, "ETHUSD": 0.01,    # India (USD-inverse)
+            "BTCUSDT": 0.001, "ETHUSDT": 0.01,   # Demo (USDT-linear)
+        }
         return defaults.get(symbol, 0.001)
 
     def round_to_tick(self, symbol: str, price: float,

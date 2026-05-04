@@ -27,6 +27,13 @@ class Settings:
     DEMO_REST_URL = "https://testnet-api.delta.exchange"
     DEMO_WS_URL = "wss://testnet-socket.delta.exchange"
 
+    # Symbol mapping: India uses USD-inverse, Global/Demo uses USDT-linear
+    SYMBOLS_BY_ENV = {
+        "production": {"btc": "BTCUSD", "eth": "ETHUSD"},
+        "testnet":    {"btc": "BTCUSD", "eth": "ETHUSD"},
+        "demo":       {"btc": "BTCUSDT", "eth": "ETHUSDT"},
+    }
+
     # Default Strategy Settings
     DEFAULT_SETTINGS = {
         "btc_enabled": True,
@@ -107,6 +114,11 @@ class Settings:
     def update_from_env(self):
         """Reload settings from environment."""
         self._load_from_env()
+
+    def get_symbols(self) -> dict:
+        """Return the correct BTC/ETH symbols for the active environment."""
+        return self.SYMBOLS_BY_ENV.get(self.DELTA_ENVIRONMENT,
+                                       self.SYMBOLS_BY_ENV["demo"])
 
 
 settings = Settings()
