@@ -128,11 +128,20 @@ async def get_account_summary():
                             "balance": bal,
                             "available": avail,
                         })
-        # Compute a total USD value (for USD-margined accounts, this is straightforward)
+        # Compute a total USD value (Account Value) by converting all assets
         usd_balance = 0.0
         for b in balances:
-            if b["symbol"] in ("USD", "USDT", "USDC"):
-                usd_balance += b["balance"]
+            sym = b["symbol"]
+            bal = b["balance"]
+            if sym in ("USD", "USDT", "USDC"):
+                usd_balance += bal
+            else:
+                # Convert crypto assets to USD using live prices
+                price = bot_runner._get_price(f"{sym}USD") or bot_runner._get_price(f"{sym}USDT")
+                if price > 0:
+                    usd_balance += bal * price
+                    b["usd_value"] = bal * price
+                
         summary["wallet"] = {
             "balances": balances,
             "total_usd": round(usd_balance, 2),

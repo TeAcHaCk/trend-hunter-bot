@@ -1041,24 +1041,33 @@ async function loadAccountSummary() {
     // Wallet balances mini row
     const walletRows = wallet.balances.map(b => {
         const icon = ASSET_ICONS[b.symbol] || b.symbol.charAt(0);
-        return `<div class="acct-wallet-item">
-            <span class="acct-wallet-icon">${icon}</span>
-            <span class="acct-wallet-sym">${b.symbol}</span>
-            <span class="acct-wallet-val">${b.balance.toFixed(4)}</span>
-            <span class="acct-wallet-avail">Avail: ${b.available.toFixed(4)}</span>
+        const usdVal = b.usd_value ? `$${b.usd_value.toFixed(2)}` : '–';
+        return `
+        <div class="acct-wallet-item">
+            <div class="acct-wallet-icon">${icon}</div>
+            <div class="acct-wallet-details">
+                <div class="acct-wallet-top">
+                    <span class="acct-wallet-sym">${b.symbol}</span>
+                    <span class="acct-wallet-val">${b.balance.toFixed(4)}</span>
+                </div>
+                <div class="acct-wallet-bottom">
+                    <span class="acct-wallet-usd">${usdVal}</span>
+                    <span class="acct-wallet-avail">Avail: ${b.available.toFixed(4)}</span>
+                </div>
+            </div>
         </div>`;
     }).join('');
 
     container.innerHTML = `
-        <!-- Hero: Today's PnL -->
+        <!-- Hero: Account Value -->
         <div class="acct-hero">
-            <div class="acct-hero-label">Today's P&L</div>
-            <div class="acct-hero-value" style="color: ${pnlColor(todayPnl)}">
-                ${formatPnLValue(todayPnl)}
+            <div class="acct-hero-label">Account Value</div>
+            <div class="acct-hero-value" style="color: var(--text-bright)">
+                $${wallet.total_usd.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
             </div>
             <div class="acct-hero-sub">
-                ${stats.today_trades || 0} trades &bull; 
-                Win Rate: ${stats.today_win_rate || 0}%
+                <span class="acct-badge">Today's P&L: <span style="color: ${pnlColor(todayPnl)}">${formatPnLValue(todayPnl)}</span></span>
+                <span class="acct-badge">Win Rate: ${stats.today_win_rate || 0}%</span>
             </div>
         </div>
 
@@ -1085,8 +1094,8 @@ async function loadAccountSummary() {
         <!-- Daily Loss Limit Bar -->
         <div class="acct-risk-bar">
             <div class="acct-risk-header">
-                <span>Daily Loss Limit</span>
-                <span style="color: ${pnlColor(dailyPnl)}">${formatPnLValue(dailyPnl)} / -$${maxLoss.toFixed(0)}</span>
+                <span class="risk-title">Daily Loss Limit</span>
+                <span class="risk-value" style="color: ${pnlColor(dailyPnl)}">${formatPnLValue(dailyPnl)} / -$${maxLoss.toFixed(0)}</span>
             </div>
             <div class="acct-progress-track">
                 <div class="acct-progress-fill" style="width: ${lossPct}%; background: ${lossBarColor}"></div>
@@ -1095,8 +1104,10 @@ async function loadAccountSummary() {
 
         <!-- Wallet Balances -->
         <div class="acct-wallet-section">
-            <div class="acct-wallet-header">💼 Wallet</div>
-            ${walletRows || '<div class="acct-wallet-empty">No balances</div>'}
+            <div class="acct-wallet-header">💼 Wallet Balances</div>
+            <div class="acct-wallet-list">
+                ${walletRows || '<div class="acct-wallet-empty">No balances</div>'}
+            </div>
         </div>
     `;
 }
