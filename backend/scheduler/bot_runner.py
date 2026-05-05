@@ -643,7 +643,7 @@ class BotRunner:
             if isinstance(bracket_result, dict) and (
                 bracket_result.get("success") or bracket_result.get("result")
             ):
-                logger.info(f"[{symbol}] Bracket order placed successfully via PUT")
+                logger.info(f"[{symbol}] Bracket order placed successfully via POST")
                 return True
             else:
                 logger.warning(f"[{symbol}] Bracket order response: {bracket_result}")

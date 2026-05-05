@@ -389,9 +389,9 @@ class DeltaClient:
         }
 
         logger.info(
-            f"Placing bracket (PUT) | PID={product_id} | SL={stop_loss_price} | TP={take_profit_price}"
+            f"Placing bracket (POST) | PID={product_id} | SL={stop_loss_price} | TP={take_profit_price}"
         )
-        return await self._request("PUT", "/v2/orders/bracket", data=payload, auth=True)
+        return await self._request("POST", "/v2/orders/bracket", data=payload, auth=True)
 
     async def edit_bracket_order(self, product_id: int,
                                  stop_loss_price: Optional[float] = None,
