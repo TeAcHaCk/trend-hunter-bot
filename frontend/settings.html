@@ -210,10 +210,102 @@
             </div>
         </div>
 
+        <!-- ═══ Danger Zone ═══ -->
+        <div class="card col-span-2" style="border: 1px solid var(--red); border-opacity: 0.3;">
+            <div class="card-header">
+                <span class="card-title" style="color: var(--red);">⚠️ Danger Zone</span>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-lg);">
+                <div>
+                    <div style="font-weight: 600; color: var(--text-bright); margin-bottom: 4px;">Reset Bot</div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted); max-width: 500px;">
+                        Stop the bot, cancel all open orders on the exchange, and clear all cached state 
+                        (positions, candles, counters). This gives you a completely fresh start. 
+                        <strong>Trade history is preserved.</strong>
+                    </div>
+                </div>
+                <button id="btn-reset" class="btn btn-danger" onclick="confirmReset()" style="white-space: nowrap;">
+                    🔄 Reset Bot
+                </button>
+            </div>
+        </div>
+
     </div>
 
 </div>
 
+<!-- Confirmation modal -->
+<dialog id="confirm-modal" class="confirm-modal" aria-labelledby="confirm-title">
+    <h3 id="confirm-title" data-confirm-title>Confirm action</h3>
+    <p data-confirm-body>Are you sure?</p>
+    <div class="confirm-actions">
+        <button type="button" class="btn btn-outline" data-confirm-cancel>Cancel</button>
+        <button type="button" class="btn btn-danger" data-confirm-ok>Confirm</button>
+    </div>
+</dialog>
+
 <script src="/static/app.js?v=2.0"></script>
+<script>
+    function confirmReset() {
+        const modal = document.getElementById('confirm-modal');
+        const title = modal.querySelector('[data-confirm-title]');
+        const body = modal.querySelector('[data-confirm-body]');
+        const okBtn = modal.querySelector('[data-confirm-ok]');
+        const cancelBtn = modal.querySelector('[data-confirm-cancel]');
+
+        title.textContent = '🔄 Reset Bot?';
+        body.innerHTML = `
+            <div style="text-align: left; font-size: 0.88rem; line-height: 1.6;">
+                This will:<br>
+                • <strong>Stop</strong> the bot if running<br>
+                • <strong>Cancel all</strong> open orders on the exchange<br>
+                • <strong>Clear all</strong> cached state (positions, candles, counters)<br>
+                <br>
+                <span style="color: var(--green);">✓ Trade history will be preserved</span>
+            </div>
+        `;
+        okBtn.textContent = '🔄 Yes, Reset';
+        okBtn.className = 'btn btn-danger';
+
+        // Remove old listeners
+        const newOk = okBtn.cloneNode(true);
+        const newCancel = cancelBtn.cloneNode(true);
+        okBtn.parentNode.replaceChild(newOk, okBtn);
+        cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+
+        newCancel.addEventListener('click', () => modal.close());
+        newOk.addEventListener('click', async () => {
+            modal.close();
+            newOk.disabled = true;
+            const btn = document.getElementById('btn-reset');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '⏳ Resetting...';
+            }
+
+            try {
+                const resp = await fetch('/api/bot/reset', { method: 'POST' });
+                const data = await resp.json();
+                if (data.success) {
+                    showToast('✅ Bot reset successfully — all state cleared', 'success');
+                    // Reload page after short delay to reflect clean state
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    showToast(`❌ Reset failed: ${data.error}`, 'error');
+                }
+            } catch (e) {
+                showToast(`❌ Reset error: ${e.message}`, 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '🔄 Reset Bot';
+                }
+            }
+        });
+
+        modal.showModal();
+    }
+</script>
 </body>
 </html>

@@ -60,6 +60,21 @@ async def pause_bot():
         return {"success": False, "error": str(e)}
 
 
+@router.post("/bot/reset")
+async def reset_bot():
+    """Full reset: stop bot, cancel all orders, wipe all state and cache."""
+    try:
+        await bot_runner.reset()
+        return {
+            "success": True,
+            "message": "Bot reset — all state cleared, orders cancelled",
+            "state": bot_runner.state,
+        }
+    except Exception as e:
+        logger.error(f"Failed to reset bot: {e}")
+        return {"success": False, "error": str(e)}
+
+
 @router.get("/positions")
 async def get_positions():
     """Get current open positions from Delta Exchange."""

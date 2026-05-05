@@ -1129,6 +1129,63 @@ class BotRunner:
         await self.delta_client.close()
         logger.info("🛑 Bot STOPPED")
 
+    async def reset(self):
+        """Full reset: stop bot, cancel all exchange orders, wipe all state."""
+        # 1. Stop the bot if running
+        if self.state != "STOPPED":
+            await self.stop()
+
+        # 2. Cancel all orders on the exchange for every symbol
+        # Re-create client if closed
+        if self.delta_client._session is None or self.delta_client._session.closed:
+            self.delta_client = DeltaClient()
+            self.position_manager.client = self.delta_client
+
+        for symbol in list(self.strategies.keys()):
+            try:
+                pid = await self.position_manager.get_product_id(symbol)
+                if pid:
+                    await self.delta_client.cancel_all_orders(pid)
+                    logger.info(f"[{symbol}] Reset: cancelled all orders on exchange")
+            except Exception as e:
+                logger.warning(f"[{symbol}] Reset: cancel orders failed: {e}")
+
+        # 3. Wipe persisted state from database
+        try:
+            async with async_session() as session:
+                row = await session.execute(
+                    select(BotSettings).where(BotSettings.key == STATE_KEY)
+                )
+                existing = row.scalar_one_or_none()
+                if existing:
+                    await session.delete(existing)
+                    await session.commit()
+                    logger.info("Reset: cleared persisted bot state from DB")
+        except Exception as e:
+            logger.warning(f"Reset: failed to clear DB state: {e}")
+
+        # 4. Reset all in-memory state
+        self.total_signals = 0
+        self.total_trades = 0
+        self.daily_signals = 0
+        self.daily_trades = 0
+        self._daily_counters_date = None
+        self._cached_candles.clear()
+        self._last_candle_time.clear()
+        self._fill_in_progress.clear()
+        self._pid_to_symbol.clear()
+        self.position_manager._positions.clear()
+        self.position_manager._daily_pnl = 0.0
+        self.position_manager._daily_pnl_reset_date = None
+        self.position_manager._last_trade_time.clear()
+
+        # 5. Re-initialize strategies with clean state
+        self._initialized = False
+        self.initialize()
+
+        await self.delta_client.close()
+        logger.info("🔄 Bot RESET — all state cleared, ready for fresh start")
+
     async def pause(self):
         self.state = "PAUSED"
         logger.info("⏸️ Bot PAUSED")
