@@ -206,6 +206,23 @@ class BotRunner:
                 pass
         return 0.0
 
+    async def _get_price_with_rest_fallback(self, symbol: str) -> float:
+        """Try WS/cache first, fall back to REST ticker API."""
+        price = self._get_price(symbol)
+        if price > 0:
+            return price
+        # REST fallback — fetch ticker from Delta Exchange
+        try:
+            ticker = await self.delta_client.get_24h_high_low(symbol)
+            if ticker:
+                p = ticker.get("mark_price") or ticker.get("close") or 0
+                if p > 0:
+                    logger.debug(f"[{symbol}] Price from REST ticker: ${p:,.2f}")
+                    return float(p)
+        except Exception as e:
+            logger.warning(f"[{symbol}] REST ticker fallback failed: {e}")
+        return 0.0
+
     def _new_coid(self, symbol: str, side: str) -> str:
         return f"th-{symbol[:3].lower()}-{side}-{uuid.uuid4().hex[:10]}"
 
@@ -242,7 +259,7 @@ class BotRunner:
         async with lock:
             try:
                 if strategy.is_in_trade():
-                    price = self._get_price(symbol)
+                    price = await self._get_price_with_rest_fallback(symbol)
                     if price:
                         strategy.last_price = price
                     else:
@@ -254,7 +271,7 @@ class BotRunner:
                     return
 
                 if strategy._orders_placed:
-                    price = self._get_price(symbol)
+                    price = await self._get_price_with_rest_fallback(symbol)
                     if price:
                         strategy.last_price = price
                     await self._check_order_status(symbol, strategy, price)
