@@ -173,6 +173,23 @@ class BotRunner:
             else:
                 logger.warning(f"Could not resolve product ID for {symbol}")
 
+    async def _cancel_all_stale_orders(self):
+        """Cancel ALL open stop orders on startup to prevent order pileup
+        from previous bot sessions / crashes."""
+        for symbol in self.strategies:
+            strategy = self.strategies[symbol]
+            # Only clean up if we're NOT in a trade (we don't want to cancel SL/TP)
+            if strategy.is_in_trade():
+                continue
+            pid = await self.position_manager.get_product_id(symbol)
+            if pid:
+                try:
+                    result = await self.delta_client.cancel_all_orders(pid)
+                    logger.info(f"[{symbol}] Startup cleanup: cancelled all open orders | {result}")
+                except Exception as e:
+                    logger.warning(f"[{symbol}] Startup cleanup failed: {e}")
+            strategy.clear_orders()
+
     # ── Helpers ───────────────────────────────────────────────────
 
     def _get_price(self, symbol: str) -> float:
@@ -321,6 +338,14 @@ class BotRunner:
         if not product_id:
             logger.error(f"[{symbol}] Cannot resolve product ID")
             return
+
+        # ── CRITICAL: Cancel ALL existing orders before placing new ones ──
+        # This prevents order pileup on the exchange.
+        try:
+            await self.delta_client.cancel_all_orders(product_id)
+            logger.debug(f"[{symbol}] Cleaned existing orders before new placement")
+        except Exception as e:
+            logger.warning(f"[{symbol}] Pre-placement cancel_all failed: {e}")
 
         high = strategy._breakout_high
         low = strategy._breakout_low
@@ -645,6 +670,8 @@ class BotRunner:
     async def _cancel_pending_orders(self, symbol: str,
                                      strategy: TrendHunterStrategy,
                                      product_id: int):
+        """Cancel ALL open orders for this product to ensure no stale orders remain."""
+        # Step 1: Cancel tracked order IDs (best-effort, in parallel)
         cancel_tasks = []
         for order_id in (strategy._long_order_id, strategy._short_order_id):
             if order_id:
@@ -656,12 +683,14 @@ class BotRunner:
             results = await asyncio.gather(*cancel_tasks, return_exceptions=True)
             ok = sum(1 for r in results
                      if isinstance(r, dict) and (r.get("success") or r.get("result")))
-            logger.info(f"[{symbol}] Cancelled {ok}/{len(cancel_tasks)} pending orders")
-        else:
-            try:
-                await self.delta_client.cancel_all_orders(product_id)
-            except Exception as e:
-                logger.warning(f"[{symbol}] cancel_all failed: {e}")
+            logger.info(f"[{symbol}] Cancelled {ok}/{len(cancel_tasks)} tracked orders")
+
+        # Step 2: ALWAYS cancel_all to catch any orphaned/untracked orders
+        try:
+            await self.delta_client.cancel_all_orders(product_id)
+            logger.info(f"[{symbol}] cancel_all sweep completed")
+        except Exception as e:
+            logger.warning(f"[{symbol}] cancel_all sweep failed: {e}")
 
         strategy.clear_orders()
 
@@ -1013,6 +1042,9 @@ class BotRunner:
             self.initialize()
 
         await self._resolve_product_ids()
+
+        # Cancel any stale orders from previous sessions / crashes
+        await self._cancel_all_stale_orders()
 
         # Best-effort leverage set (parallel)
         leverage_tasks = []
