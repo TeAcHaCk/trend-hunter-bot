@@ -95,6 +95,157 @@ async def get_balance():
         return {"success": False, "error": str(e)}
 
 
+@router.get("/account-summary")
+async def get_account_summary():
+    """Combined account summary: wallet balance + trade stats + risk metrics.
+    
+    Replaces the old wallet-only panel with a trader-focused hybrid view.
+    """
+    from datetime import datetime
+    from sqlalchemy import select, func, and_
+    from backend.models.database import async_session
+    from backend.models.trade_log import TradeLog
+
+    summary = {
+        "wallet": None,
+        "stats": None,
+        "risk": None,
+    }
+
+    # 1. Wallet balance from Delta Exchange
+    try:
+        wallet_raw = await bot_runner.delta_client.get_wallet_balances()
+        balances = []
+        if isinstance(wallet_raw, dict):
+            raw_list = wallet_raw.get("result", [])
+            if isinstance(raw_list, list):
+                for b in raw_list:
+                    bal = float(b.get("balance", 0) or 0)
+                    avail = float(b.get("available_balance", 0) or 0)
+                    if bal > 0:
+                        balances.append({
+                            "symbol": b.get("asset_symbol", "?"),
+                            "balance": bal,
+                            "available": avail,
+                        })
+        # Compute a total USD value (for USD-margined accounts, this is straightforward)
+        usd_balance = 0.0
+        for b in balances:
+            if b["symbol"] in ("USD", "USDT", "USDC"):
+                usd_balance += b["balance"]
+        summary["wallet"] = {
+            "balances": balances,
+            "total_usd": round(usd_balance, 2),
+        }
+    except Exception as e:
+        logger.warning(f"Account summary: wallet fetch failed: {e}")
+
+    # 2. Trade stats from database
+    try:
+        async with async_session() as session:
+            # Total closed trades
+            total_closed = (await session.execute(
+                select(func.count()).select_from(TradeLog).where(TradeLog.status == "closed")
+            )).scalar() or 0
+
+            # Wins
+            total_wins = (await session.execute(
+                select(func.count()).select_from(TradeLog).where(
+                    and_(TradeLog.status == "closed", TradeLog.pnl > 0)
+                )
+            )).scalar() or 0
+
+            # Losses
+            total_losses = (await session.execute(
+                select(func.count()).select_from(TradeLog).where(
+                    and_(TradeLog.status == "closed", TradeLog.pnl < 0)
+                )
+            )).scalar() or 0
+
+            # Total PnL
+            total_pnl = (await session.execute(
+                select(func.sum(TradeLog.pnl)).where(TradeLog.status == "closed")
+            )).scalar() or 0.0
+
+            # Today's PnL
+            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            today_pnl = (await session.execute(
+                select(func.sum(TradeLog.pnl)).where(
+                    and_(TradeLog.status == "closed", TradeLog.timestamp >= today_start)
+                )
+            )).scalar() or 0.0
+
+            # Today's trades
+            today_trades = (await session.execute(
+                select(func.count()).select_from(TradeLog).where(
+                    and_(TradeLog.status == "closed", TradeLog.timestamp >= today_start)
+                )
+            )).scalar() or 0
+
+            # Today's wins
+            today_wins = (await session.execute(
+                select(func.count()).select_from(TradeLog).where(
+                    and_(TradeLog.status == "closed", TradeLog.pnl > 0,
+                         TradeLog.timestamp >= today_start)
+                )
+            )).scalar() or 0
+
+            # Gross wins / gross losses for profit factor
+            gross_wins = (await session.execute(
+                select(func.sum(TradeLog.pnl)).where(
+                    and_(TradeLog.status == "closed", TradeLog.pnl > 0)
+                )
+            )).scalar() or 0.0
+
+            gross_losses = abs((await session.execute(
+                select(func.sum(TradeLog.pnl)).where(
+                    and_(TradeLog.status == "closed", TradeLog.pnl < 0)
+                )
+            )).scalar() or 0.0)
+
+            # Best / worst trade
+            best_trade = (await session.execute(
+                select(func.max(TradeLog.pnl)).where(TradeLog.status == "closed")
+            )).scalar() or 0.0
+
+            worst_trade = (await session.execute(
+                select(func.min(TradeLog.pnl)).where(TradeLog.status == "closed")
+            )).scalar() or 0.0
+
+            profit_factor = round(gross_wins / gross_losses, 2) if gross_losses > 0 else 0.0
+
+            summary["stats"] = {
+                "total_closed": total_closed,
+                "total_wins": total_wins,
+                "total_losses": total_losses,
+                "win_rate": round((total_wins / total_closed * 100), 1) if total_closed > 0 else 0,
+                "total_pnl": round(total_pnl, 2),
+                "today_pnl": round(today_pnl, 2),
+                "today_trades": today_trades,
+                "today_wins": today_wins,
+                "today_win_rate": round((today_wins / today_trades * 100), 1) if today_trades > 0 else 0,
+                "profit_factor": profit_factor,
+                "best_trade": round(best_trade, 2),
+                "worst_trade": round(worst_trade, 2),
+            }
+    except Exception as e:
+        logger.warning(f"Account summary: stats fetch failed: {e}")
+
+    # 3. Risk metrics from position manager
+    try:
+        pm = bot_runner.position_manager
+        summary["risk"] = {
+            "daily_pnl": round(pm._daily_pnl, 2),
+            "max_daily_loss": pm.max_daily_loss,
+            "daily_loss_pct": round(abs(pm._daily_pnl) / pm.max_daily_loss * 100, 1) if pm.max_daily_loss > 0 else 0,
+            "leverage": pm.leverage,
+        }
+    except Exception as e:
+        logger.warning(f"Account summary: risk fetch failed: {e}")
+
+    return {"success": True, "result": summary}
+
+
 
 @router.websocket("/ws/live")
 async def websocket_live(websocket: WebSocket):

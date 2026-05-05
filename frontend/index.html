@@ -247,13 +247,13 @@
     <!-- ═══ Wallet Balance + Activity Log ═══ -->
     <div class="grid-2" style="margin-bottom: var(--space-xl);">
 
-        <!-- Wallet Balance Card -->
-        <div class="card">
+        <!-- Account & Performance Panel -->
+        <div class="card" id="account-panel">
             <div class="card-header">
-                <span class="card-title">💼 Wallet Balance</span>
-                <button class="btn btn-ghost btn-sm" id="btn-refresh-balance" onclick="loadBalance()" title="Refresh balance">↻ Refresh</button>
+                <span class="card-title">📊 Account & Performance</span>
+                <button class="btn btn-ghost btn-sm" id="btn-refresh-account" onclick="loadAccountSummary()" title="Refresh">↻ Refresh</button>
             </div>
-            <div id="wallet-container">
+            <div id="account-summary-container">
                 <div class="wallet-skeleton">
                     <div class="skeleton" style="height: 20px; border-radius: 4px; margin-bottom: 10px;"></div>
                     <div class="skeleton" style="height: 20px; border-radius: 4px; margin-bottom: 10px; width: 75%;"></div>

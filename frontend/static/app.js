@@ -982,7 +982,7 @@ function updateKpiStrip(data) {
 }
 
 // ═══════════════════════════════════════════════════════
-// WALLET BALANCE
+// ACCOUNT & PERFORMANCE PANEL
 // ═══════════════════════════════════════════════════════
 
 const ASSET_ICONS = {
@@ -990,64 +990,120 @@ const ASSET_ICONS = {
     'INR': '₹', 'USDC': '💵',
 };
 
-async function loadBalance() {
-    const container = document.getElementById('wallet-container');
+function formatPnLValue(val) {
+    const n = parseFloat(val || 0);
+    const sign = n >= 0 ? '+' : '';
+    return `${sign}$${n.toFixed(2)}`;
+}
+
+function pnlColor(val) {
+    const n = parseFloat(val || 0);
+    if (n > 0) return 'var(--green)';
+    if (n < 0) return 'var(--red)';
+    return 'var(--text-muted)';
+}
+
+async function loadAccountSummary() {
+    const container = document.getElementById('account-summary-container');
     if (!container) return;
 
-    const refreshBtn = document.getElementById('btn-refresh-balance');
+    const refreshBtn = document.getElementById('btn-refresh-account');
     if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = '↻ Loading...'; }
 
-    const result = await apiGet('/api/balance', { quiet: true });
+    const result = await apiGet('/api/account-summary', { quiet: true });
 
     if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.textContent = '↻ Refresh'; }
 
-    if (!result.success) {
+    if (!result.success || !result.result) {
         container.innerHTML = `
             <div class="wallet-empty">
                 <div class="wallet-empty-icon">🔑</div>
-                <div>Configure API keys to view balance</div>
+                <div>Configure API keys to view account</div>
             </div>`;
         return;
     }
 
-    // Normalise the response — Delta returns result as array or {result: array}
-    let balances = result.result || [];
-    if (balances.result) balances = balances.result;
-    if (!Array.isArray(balances)) balances = [];
+    const data = result.result;
+    const wallet = data.wallet || { balances: [], total_usd: 0 };
+    const stats = data.stats || {};
+    const risk = data.risk || {};
 
-    // Filter to non-zero balances
-    const nonZero = balances.filter(b => parseFloat(b.balance || b.amount || 0) > 0);
+    // Today's PnL (hero number)
+    const todayPnl = stats.today_pnl || 0;
+    const totalPnl = stats.total_pnl || 0;
 
-    if (nonZero.length === 0) {
-        container.innerHTML = `
-            <div class="wallet-empty">
-                <div class="wallet-empty-icon">💼</div>
-                <div>No balances found</div>
-            </div>`;
-        return;
-    }
+    // Daily loss limit progress
+    const maxLoss = risk.max_daily_loss || 100;
+    const dailyPnl = risk.daily_pnl || 0;
+    const lossPct = Math.min(risk.daily_loss_pct || 0, 100);
+    const lossBarColor = lossPct > 75 ? 'var(--red)' : lossPct > 40 ? '#f59e0b' : 'var(--green)';
 
-    container.innerHTML = nonZero.map(b => {
-        const sym = b.asset_symbol || b.asset_id || 'UNKNOWN';
-        const bal = parseFloat(b.balance || b.amount || 0);
-        const icon = ASSET_ICONS[sym] || sym.charAt(0);
-        const availBal = parseFloat(b.available_balance || bal);
-        return `
-            <div class="wallet-row">
-                <div class="wallet-asset">
-                    <div class="wallet-asset-icon">${icon}</div>
-                    <div>
-                        <div class="wallet-asset-name">${sym}</div>
-                        <div class="wallet-asset-sub">Available: ${availBal.toFixed(4)}</div>
-                    </div>
-                </div>
-                <div class="wallet-balance">
-                    <div class="wallet-balance-value">${bal.toFixed(4)}</div>
-                    <div class="wallet-balance-usd">${sym}</div>
-                </div>
-            </div>`;
+    // Wallet balances mini row
+    const walletRows = wallet.balances.map(b => {
+        const icon = ASSET_ICONS[b.symbol] || b.symbol.charAt(0);
+        return `<div class="acct-wallet-item">
+            <span class="acct-wallet-icon">${icon}</span>
+            <span class="acct-wallet-sym">${b.symbol}</span>
+            <span class="acct-wallet-val">${b.balance.toFixed(4)}</span>
+            <span class="acct-wallet-avail">Avail: ${b.available.toFixed(4)}</span>
+        </div>`;
     }).join('');
+
+    container.innerHTML = `
+        <!-- Hero: Today's PnL -->
+        <div class="acct-hero">
+            <div class="acct-hero-label">Today's P&L</div>
+            <div class="acct-hero-value" style="color: ${pnlColor(todayPnl)}">
+                ${formatPnLValue(todayPnl)}
+            </div>
+            <div class="acct-hero-sub">
+                ${stats.today_trades || 0} trades &bull; 
+                Win Rate: ${stats.today_win_rate || 0}%
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="acct-stats-grid">
+            <div class="acct-stat">
+                <div class="acct-stat-label">All-Time P&L</div>
+                <div class="acct-stat-value" style="color: ${pnlColor(totalPnl)}">${formatPnLValue(totalPnl)}</div>
+            </div>
+            <div class="acct-stat">
+                <div class="acct-stat-label">Win Rate</div>
+                <div class="acct-stat-value">${stats.win_rate || 0}%</div>
+            </div>
+            <div class="acct-stat">
+                <div class="acct-stat-label">Trades (W/L)</div>
+                <div class="acct-stat-value">${stats.total_closed || 0} <span class="acct-wl">(${stats.total_wins || 0}/${stats.total_losses || 0})</span></div>
+            </div>
+            <div class="acct-stat">
+                <div class="acct-stat-label">Profit Factor</div>
+                <div class="acct-stat-value">${stats.profit_factor || '–'}</div>
+            </div>
+        </div>
+
+        <!-- Daily Loss Limit Bar -->
+        <div class="acct-risk-bar">
+            <div class="acct-risk-header">
+                <span>Daily Loss Limit</span>
+                <span style="color: ${pnlColor(dailyPnl)}">${formatPnLValue(dailyPnl)} / -$${maxLoss.toFixed(0)}</span>
+            </div>
+            <div class="acct-progress-track">
+                <div class="acct-progress-fill" style="width: ${lossPct}%; background: ${lossBarColor}"></div>
+            </div>
+        </div>
+
+        <!-- Wallet Balances -->
+        <div class="acct-wallet-section">
+            <div class="acct-wallet-header">💼 Wallet</div>
+            ${walletRows || '<div class="acct-wallet-empty">No balances</div>'}
+        </div>
+    `;
 }
+
+// Keep old name as alias for backward compatibility
+async function loadBalance() { return loadAccountSummary(); }
+
 
 // ═══════════════════════════════════════════════════════
 // DASHBOARD STATS (from /api/trades/stats)

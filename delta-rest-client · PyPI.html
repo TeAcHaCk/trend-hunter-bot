@@ -1,0 +1,2116 @@
+<!DOCTYPE html>
+<!-- saved from url=(0043)https://pypi.org/project/delta-rest-client/ -->
+<html lang="en" dir="ltr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="defaultLanguage" content="en">
+    <meta name="availableLanguages" content="en, es, fr, ja, pt_BR, uk, el, de, zh_Hans, zh_Hant, ru, he, eo, ko">
+    <title>delta-rest-client · PyPI</title>
+    <meta name="description" content="Rest Client for Delta Exchange">
+    <link rel="stylesheet" href="./delta-rest-client · PyPI_files/warehouse-ltr.0f58843e.css">
+    <link rel="stylesheet" href="./delta-rest-client · PyPI_files/fontawesome.379f9724.css">
+    <link rel="stylesheet" href="./delta-rest-client · PyPI_files/fonts.3b5d1a1c.css">
+    <noscript>
+      <link rel="stylesheet"
+            href="/static/css/noscript.0673c9ea.css">
+    </noscript>
+    <link rel="icon" href="https://pypi.org/static/images/favicon.35549fe8.ico" type="image/x-icon">
+    <link rel="alternate" type="application/rss+xml" title="RSS: 40 latest updates" href="https://pypi.org/rss/updates.xml">
+    <link rel="alternate" type="application/rss+xml" title="RSS: 40 newest packages" href="https://pypi.org/rss/packages.xml">
+<link rel="alternate" type="application/rss+xml" title="RSS: latest releases for delta-rest-client" href="https://pypi.org/rss/project/delta-rest-client/releases.xml">      <link rel="canonical" href="https://pypi.org/project/delta-rest-client/">
+    <meta property="og:url" content="https://pypi.org/project/delta-rest-client/">
+    <meta property="og:site_name" content="PyPI">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://pypi.org/static/images/twitter.abaf4b19.webp">
+    <meta property="og:title" content="delta-rest-client">
+    <meta property="og:description" content="Rest Client for Delta Exchange">
+    <link rel="search" type="application/opensearchdescription+xml" title="PyPI" href="https://pypi.org/opensearch.xml">
+    <script defer="" src="./delta-rest-client · PyPI_files/warehouse.e9abdc3b.js.download">
+    </script>
+  <script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']]
+  },
+};
+  </script>
+  <script async="" src="./delta-rest-client · PyPI_files/tex-svg.js.download" integrity="sha256-1CldwzdEg2k1wTmf7s5RWVd7NMXI/7nxxjJM2C4DqII=" crossorigin="anonymous"></script>
+      <script defer="" data-domain="pypi.org" src="./delta-rest-client · PyPI_files/script.js.download"></script>
+    <script async="" src="./delta-rest-client · PyPI_files/ethicalads.min.js.download" integrity="sha256-U3hKDidudIaxBDEzwGJApJgPEf2mWk6cfMWghrAa6i0= sha384-UcmsCqcNRSLW/dV3Lo1oCi2/VaurXbib6p4HyUEOeIa/4OpsrnucrugAefzVZJfI sha512-q4t1L4xEjGV2R4hzqCa41P8jrgFUS8xTb8rdNv4FGvw7FpydVj/kkxBJHOiaoxHa8olCcx1Slk9K+3sNbsM4ug==" crossorigin="anonymous"></script>
+  <style type="text/css">.CtxtMenu_InfoClose {  top:.2em; right:.2em;}
+.CtxtMenu_InfoContent {  overflow:auto; text-align:left; font-size:80%;  padding:.4em .6em; border:1px inset; margin:1em 0px;  max-height:20em; max-width:30em; background-color:#EEEEEE;  white-space:normal;}
+.CtxtMenu_Info.CtxtMenu_MousePost {outline:none;}
+.CtxtMenu_Info {  position:fixed; left:50%; width:auto; text-align:center;  border:3px outset; padding:1em 2em; background-color:#DDDDDD;  color:black;  cursor:default; font-family:message-box; font-size:120%;  font-style:normal; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 15px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius:15px;               /* Safari and Chrome */  -moz-border-radius:15px;                  /* Firefox */  -khtml-border-radius:15px;                /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */  filter:progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color="gray", Positive="true"); /* IE */}
+</style><style type="text/css">.CtxtMenu_MenuClose {  position:absolute;  cursor:pointer;  display:inline-block;  border:2px solid #AAA;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  font-family: "Courier New", Courier;  font-size:24px;  color:#F0F0F0}
+.CtxtMenu_MenuClose span {  display:block; background-color:#AAA; border:1.5px solid;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  line-height:0;  padding:8px 0 6px     /* may need to be browser-specific */}
+.CtxtMenu_MenuClose:hover {  color:white!important;  border:2px solid #CCC!important}
+.CtxtMenu_MenuClose:hover span {  background-color:#CCC!important}
+.CtxtMenu_MenuClose:hover:focus {  outline:none}
+</style><style type="text/css">.CtxtMenu_Menu {  position:absolute;  background-color:white;  color:black;  width:auto; padding:5px 0px;  border:1px solid #CCCCCC; margin:0; cursor:default;  font: menu; text-align:left; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 5px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius: 5px;             /* Safari and Chrome */  -moz-border-radius: 5px;                /* Firefox */  -khtml-border-radius: 5px;              /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */}
+.CtxtMenu_MenuItem {  padding: 1px 2em;  background:transparent;}
+.CtxtMenu_MenuArrow {  position:absolute; right:.5em; padding-top:.25em; color:#666666;  font-family: null; font-size: .75em}
+.CtxtMenu_MenuActive .CtxtMenu_MenuArrow {color:white}
+.CtxtMenu_MenuArrow.CtxtMenu_RTL {left:.5em; right:auto}
+.CtxtMenu_MenuCheck {  position:absolute; left:.7em;  font-family: null}
+.CtxtMenu_MenuCheck.CtxtMenu_RTL { right:.7em; left:auto }
+.CtxtMenu_MenuRadioCheck {  position:absolute; left: .7em;}
+.CtxtMenu_MenuRadioCheck.CtxtMenu_RTL {  right: .7em; left:auto}
+.CtxtMenu_MenuInputBox {  padding-left: 1em; right:.5em; color:#666666;  font-family: null;}
+.CtxtMenu_MenuInputBox.CtxtMenu_RTL {  left: .1em;}
+.CtxtMenu_MenuComboBox {  left:.1em; padding-bottom:.5em;}
+.CtxtMenu_MenuSlider {  left: .1em;}
+.CtxtMenu_SliderValue {  position:absolute; right:.1em; padding-top:.25em; color:#333333;  font-size: .75em}
+.CtxtMenu_SliderBar {  outline: none; background: #d3d3d3}
+.CtxtMenu_MenuLabel {  padding: 1px 2em 3px 1.33em;  font-style:italic}
+.CtxtMenu_MenuRule {  border-top: 1px solid #DDDDDD;  margin: 4px 3px;}
+.CtxtMenu_MenuDisabled {  color:GrayText}
+.CtxtMenu_MenuActive {  background-color: #606872;  color: white;}
+.CtxtMenu_MenuDisabled:focus {  background-color: #E8E8E8}
+.CtxtMenu_MenuLabel:focus {  background-color: #E8E8E8}
+.CtxtMenu_ContextMenu:focus {  outline:none}
+.CtxtMenu_ContextMenu .CtxtMenu_MenuItem:focus {  outline:none}
+.CtxtMenu_SelectionMenu {  position:relative; float:left;  border-bottom: none; -webkit-box-shadow:none; -webkit-border-radius:0px; }
+.CtxtMenu_SelectionItem {  padding-right: 1em;}
+.CtxtMenu_Selection {  right: 40%; width:50%; }
+.CtxtMenu_SelectionBox {  padding: 0em; max-height:20em; max-width: none;  background-color:#FFFFFF;}
+.CtxtMenu_SelectionDivider {  clear: both; border-top: 2px solid #000000;}
+.CtxtMenu_Menu .CtxtMenu_MenuClose {  top:-10px; left:-10px}
+</style><style id="MJX-SVG-styles">
+mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+  min-height: 1px;
+  min-width: 1px;
+}
+
+mjx-container[jax="SVG"] > svg a {
+  fill: blue;
+  stroke: blue;
+}
+
+mjx-assistive-mml {
+  position: absolute !important;
+  top: 0px;
+  left: 0px;
+  clip: rect(1px, 1px, 1px, 1px);
+  padding: 1px 0px 0px 0px !important;
+  border: 0px !important;
+  display: block !important;
+  width: auto !important;
+  overflow: hidden !important;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+mjx-assistive-mml[display="block"] {
+  width: 100% !important;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][display="true"][width="full"] {
+  display: flex;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line], svg[data-table] > g > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame], svg[data-table] > g > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed, svg[data-table] > g > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted, svg[data-table] > g > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > g > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"] path[data-c], mjx-container[jax="SVG"] use[data-c] {
+  stroke-width: 3;
+}
+</style></head>
+  <body data-controller="viewport-toggle" style="padding-top: 0px;">
+      <!-- Accessibility: this link should always be the first piece of content inside the body-->
+      <a href="https://pypi.org/project/delta-rest-client/#content" class="skip-to-content">Skip to main content</a>
+      <button type="button" class="button button--primary button--switch-to-mobile hidden" data-viewport-toggle-target="switchToMobile" data-action="viewport-toggle#switchToMobile">Switch to mobile version</button>
+      <div id="sticky-notifications" class="stick-to-top js-stick-to-top">
+        <!-- Add browser warning. Will show for ie9 and below -->
+        <!--[if IE]>
+      <div class="notification-bar notification-bar--warning" role="status">
+        <span class="notification-bar__icon">
+          <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+          <span class="sr-only">Warning</span>
+        </span>
+        <span class="notification-bar__message">You are using an unsupported browser, upgrade to a newer version.</span>
+      </div>
+      <![endif]-->
+        <noscript>
+          <div class="notification-bar notification-bar--warning" role="status">
+            <span class="notification-bar__icon">
+              <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+              <span class="sr-only">Warning</span>
+            </span>
+            <span class="notification-bar__message">Some features may not work without JavaScript. Please try enabling it if you encounter problems.</span>
+          </div>
+        </noscript>
+<div data-html-include="/_includes/unauthed/notification-banners/">  <div class="notification-bar notification-bar--banner notification-bar--dismissable" data-controller="notification" data-notification-target="notification" id="3fba505e-4a8a-4a50-ac6d-265e2cb492cb">
+    <span class="notification-bar__icon">
+      <i class="fa fa-ticket" aria-hidden="true"></i>
+    </span>
+    <span class="notification-bar__message">
+      Join us at PyCon US 2026 in Long Beach, CA starting May 13! Grab your ticket today before they're gone.&nbsp;
+      <a href="https://us.pycon.org/2026/attend/information/" class="button button--dark button--small button--primary" target="_blank" rel="noopener">PYCON US: TICKET SALES ENDING SOON!</a>
+    </span>
+      <button type="button" title="Dismiss this notification" data-notification-target="dismissButton" data-action="click-&gt;notification#dismiss" class="notification-bar__dismiss" aria-label="Close">
+        <i class="fa fa-times" aria-hidden="true"></i>
+      </button>
+  </div>
+</div>    </div>
+<div data-html-include="/_includes/unauthed/flash-messages/"></div><div data-html-include="/_includes/authed/session-notifications/"></div><header class="site-header ">
+  <div class="site-container">
+    <div class="split-layout">
+        <div class="split-layout">
+          <div>
+            <a class="site-header__logo" href="https://pypi.org/">
+              <img alt="PyPI" src="./delta-rest-client · PyPI_files/logo-small.8998e9d1.svg">
+            </a>
+          </div>
+          <form class="search-form search-form--primary" action="https://pypi.org/search/" role="search">
+            <label for="search" class="sr-only">Search PyPI</label>
+            <input id="search" class="search-form__search" type="text" name="q" placeholder="Type &#39;/&#39; to search projects" value="" autocomplete="off" autocapitalize="off" spellcheck="false" data-controller="search-focus" data-action="keydown@window-&gt;search-focus#focusSearchField" data-search-focus-target="searchField">
+            <button type="submit" class="search-form__button">
+              <i class="fa fa-search" aria-hidden="true"></i>
+              <span class="sr-only">Search</span>
+            </button>
+          </form>
+        </div>
+<div data-html-include="/_includes/authed/current-user-indicator/">        <div id="user-indicator" class="horizontal-menu horizontal-menu--light horizontal-menu--tall">
+    <nav class="horizontal-menu horizontal-menu--light horizontal-menu--tall hide-on-tablet" aria-label="Main navigation">
+      <ul>
+        <li class="horizontal-menu__item">
+          <a href="https://pypi.org/help/" class="horizontal-menu__link">Help</a>
+        </li>
+        <li class="horizontal-menu__item">
+          <a href="https://docs.pypi.org/" class="horizontal-menu__link">Docs</a>
+        </li>
+        <li class="horizontal-menu__item">
+          <a href="https://pypi.org/sponsors/" class="horizontal-menu__link">Sponsors</a>
+        </li>
+        <li class="horizontal-menu__item">
+          <a href="https://pypi.org/account/login/?next=https%3A%2F%2Fpypi.org%2Fproject%2Fdelta-rest-client%2F" class="horizontal-menu__link">Log in</a>
+        </li>
+        <li class="horizontal-menu__item">
+          <a href="https://pypi.org/account/register/" class="horizontal-menu__link">Register</a>
+        </li>
+      </ul>
+    </nav>
+    <nav class="dropdown dropdown--on-menu hidden show-on-tablet" aria-label="Main navigation">
+      <button type="button" class="horizontal-menu__link dropdown__trigger" aria-haspopup="true" aria-expanded="false" aria-label="View menu" data-dropdown-bound="true">
+Menu        <span class="dropdown__trigger-caret">
+          <i class="fa fa-caret-down" aria-hidden="true"></i>
+        </span>
+      </button>
+      <ul class="dropdown__content" aria-hidden="true" aria-label="Main menu">
+        <li>
+          <a class="dropdown__link" href="https://pypi.org/help/">Help</a>
+        </li>
+        <li>
+          <a class="dropdown__link" href="https://docs.pypi.org/">Docs</a>
+        </li>
+        <li>
+          <a class="dropdown__link" href="https://pypi.org/sponsors/">Sponsors</a>
+        </li>
+        <li>
+          <a class="dropdown__link" href="https://pypi.org/account/login/?next=https%3A%2F%2Fpypi.org%2Fproject%2Fdelta-rest-client%2F">Log in</a>
+        </li>
+        <li>
+          <a class="dropdown__link" href="https://pypi.org/account/register/">Register</a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</div>  </div>
+</div>
+</header>
+  <div class="mobile-search">
+    <form class="search-form search-form--fullwidth" action="https://pypi.org/search/" role="search">
+      <label for="mobile-search" class="sr-only">Search PyPI</label>
+      <input id="mobile-search" class="search-form__search" type="text" name="q" placeholder="Search projects" value="" autocomplete="off" autocapitalize="off" spellcheck="false">
+      
+      <button type="submit" class="search-form__button">
+        <i class="fa fa-search" aria-hidden="true"></i>
+        <span class="sr-only">Search</span>
+      </button>
+    </form>
+  </div>
+<main id="content">
+  <div class="banner">
+    <div class="package-header">
+      <div class="package-header__left">
+        <h1 class="package-header__name">delta-rest-client 1.0.14</h1>
+          <div data-controller="clipboard">
+            <p class="package-header__pip-instructions">
+              <span id="pip-command" data-clipboard-target="source">pip install delta-rest-client</span>
+              <button type="button" class="copy-tooltip copy-tooltip-s" data-action="clipboard#copy" data-clipboard-target="tooltip" data-clipboard-tooltip-value="Copy to clipboard">
+                <i class="fa fa-copy" aria-hidden="true"></i>
+                <span class="sr-only">Copy PIP instructions</span>
+              </button>
+            </p>
+          </div>
+      </div>
+      <div class="package-header__right">
+            <a class="status-badge status-badge--good" href="https://pypi.org/project/delta-rest-client/">
+              <span>Latest version</span>
+            </a>
+        <p class="package-header__date">
+Released: <time datetime="2026-04-23T10:51:23+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2026-04-23 16:21:23 (+05:30)" aria-label="2026-04-23 16:21:23 (+05:30)">Apr 23, 2026</time>        </p>
+      </div>
+    </div>
+  </div>
+  <div class="horizontal-section horizontal-section--grey horizontal-section--thin">
+    <div class="site-container">
+<div data-html-include="/_includes/authed/administer-project-include/delta-rest-client"></div>    <div class="split-layout split-layout--middle package-description">
+        <p class="package-description__summary">Rest Client for Delta Exchange</p>
+<div data-html-include="/_includes/authed/edit-project-button/delta-rest-client"></div>  </div>
+</div>
+</div>
+<div data-controller="project-tabs" data-project-tabs-content="description">
+  <div class="tabs-container">
+    <div class="vertical-tabs">
+      <div class="vertical-tabs__tabs">
+        <div class="sidebar-section">
+          <h3 class="sidebar-section__title">Navigation</h3>
+          <nav aria-label="Navigation for delta-rest-client">
+            <ul class="vertical-tabs__list" role="tablist">
+              <li role="tab">
+                <a id="description-tab" href="https://pypi.org/project/delta-rest-client/#description" data-project-tabs-target="tab" data-action="project-tabs#onTabClick" class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--is-active" aria-selected="true" aria-label="Project description. Focus will be moved to the description.">
+                  <i class="fa fa-align-left" aria-hidden="true"></i>
+Project description                </a>
+              </li>
+              <li role="tab">
+                <a id="history-tab" href="https://pypi.org/project/delta-rest-client/#history" data-project-tabs-target="tab" data-action="project-tabs#onTabClick" class="vertical-tabs__tab vertical-tabs__tab--with-icon" aria-label="Release history. Focus will be moved to the history panel.">
+                  <i class="fa fa-history" aria-hidden="true"></i>
+Release history                </a>
+              </li>
+                <li role="tab">
+                  <a id="files-tab" href="https://pypi.org/project/delta-rest-client/#files" data-project-tabs-target="tab" data-action="project-tabs#onTabClick" class="vertical-tabs__tab vertical-tabs__tab--with-icon" aria-label="Download files. Focus will be moved to the project files.">
+                    <i class="fa fa-download" aria-hidden="true"></i>
+Download files                  </a>
+                </li>
+            </ul>
+          </nav>
+        </div>
+<div class="sidebar-section verified">
+  <h3 class="sidebar-section__title">
+Verified details    <i class="fa fa-circle-check check" title="Verified by PyPI on 2026-04-23"></i>
+  </h3>
+  <small><i>These details have been <a href="https://docs.pypi.org/project_metadata/#verified-details">verified by PyPI</a></i></small>
+    <h6>Maintainers</h6>
+      <span class="sidebar-section__maintainer">
+        <a href="https://pypi.org/user/dev_at_deltaex/" aria-label="">
+          <span class="sidebar-section__user-gravatar">
+            <img src="./delta-rest-client · PyPI_files/68747470733a2f2f7365637572652e67726176617461722e636f6d2f6176617461722f31633064333933323135643133346362386435346633316636383932393932363f73697a653d3530" height="50" width="50" alt="Avatar for dev_at_deltaex from gravatar.com" title="Avatar for dev_at_deltaex from gravatar.com">
+          </span>
+          <span class="sidebar-section__user-gravatar-text">dev_at_deltaex</span>
+        </a>
+      </span>
+      <span class="sidebar-section__maintainer">
+        <a href="https://pypi.org/user/mohdarif/" aria-label="">
+          <span class="sidebar-section__user-gravatar">
+            <img src="./delta-rest-client · PyPI_files/68747470733a2f2f7365637572652e67726176617461722e636f6d2f6176617461722f31353939633237303363323864353339616335386661386566363933316431643f73697a653d3530" height="50" width="50" alt="Avatar for mohdarif from gravatar.com" title="Avatar for mohdarif from gravatar.com">
+          </span>
+          <span class="sidebar-section__user-gravatar-text">mohdarif</span>
+        </a>
+      </span>
+      <span class="sidebar-section__maintainer">
+        <a href="https://pypi.org/user/saurabh.goyal/" aria-label="">
+          <span class="sidebar-section__user-gravatar">
+            <img src="./delta-rest-client · PyPI_files/68747470733a2f2f7365637572652e67726176617461722e636f6d2f6176617461722f66323130623563303837373330666165653437336231353632623634636664663f73697a653d3530" height="50" width="50" alt="Avatar for saurabh.goyal from gravatar.com" title="Avatar for saurabh.goyal from gravatar.com">
+          </span>
+          <span class="sidebar-section__user-gravatar-text">saurabh.goyal</span>
+        </a>
+      </span>
+</div>
+<div class="sidebar-section unverified">
+  <h3 class="sidebar-section__title">Unverified details</h3>
+  <small><i>These details have <b>not</b> been verified by PyPI</i></small>
+    <h6>Project links</h6>
+    <ul class="vertical-tabs__list">
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed" href="https://github.com/delta-exchange/python-rest-client" rel="nofollow">  <i class="fas fa-home" aria-hidden="true"></i>Homepage</a>
+          </li>
+    </ul>
+    <div class="sidebar-section unverified">
+      <h6>Meta</h6>
+      <ul>
+          <li>
+            <span>
+              <strong>License:</strong> MIT License
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Author:</strong> <a href="mailto:me@arbaaz.io">Arbaaz</a>
+            </span>
+          </li>
+      </ul>
+    </div>
+    <div class="sidebar-section unverified">
+      <h6 class="sidebar-section__title">Classifiers</h6>
+      <ul class="sidebar-section__classifiers">
+          <li>
+            <strong>License</strong>
+            <ul>
+                <li>
+                  <a href="https://pypi.org/search/?c=License+%3A%3A+OSI+Approved+%3A%3A+MIT+License">
+                    OSI Approved :: MIT License
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Operating System</strong>
+            <ul>
+                <li>
+                  <a href="https://pypi.org/search/?c=Operating+System+%3A%3A+OS+Independent">
+                    OS Independent
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Programming Language</strong>
+            <ul>
+                <li>
+                  <a href="https://pypi.org/search/?c=Programming+Language+%3A%3A+Python+%3A%3A+3">
+                    Python :: 3
+                  </a>
+                </li>
+            </ul>
+          </li>
+      </ul>
+    </div>
+</div>  <div class="sidebar-section" data-ea-publisher="psf" data-ea-type="psf" data-ea-keywords="pypi-sidebar"></div>
+        <div class="sidebar-section">
+          <a class="button button--full-width button--warning" href="https://pypi.org/project/delta-rest-client/submit-malware-report/" rel="nofollow" role="button">Report project as malware</a>
+        </div>
+      </div>
+      <div class="vertical-tabs__panel">
+        <!-- mobile menu -->
+        <nav aria-label="Navigation for delta-rest-client">
+          <ul class="vertical-tabs__list" role="tablist">
+            <li role="tab">
+              <a id="mobile-description-tab" href="https://pypi.org/project/delta-rest-client/#description" data-project-tabs-target="mobileTab" data-action="project-tabs#onTabClick" class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--mobile vertical-tabs__tab--no-top-border vertical-tabs__tab--is-active" aria-selected="true" aria-label="Project description. Focus will be moved to the description.">
+                <i class="fa fa-align-left" aria-hidden="true"></i>
+Project description              </a>
+            </li>
+            <li role="tab">
+              <a id="mobile-data-tab" href="https://pypi.org/project/delta-rest-client/#data" data-project-tabs-target="mobileTab" data-action="project-tabs#onTabClick" class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--mobile" aria-label="Project details. Focus will be moved to the project details.">
+                <i class="fa fa-info-circle" aria-hidden="true"></i>
+Project details              </a>
+            </li>
+            <li role="tab">
+              <a id="mobile-history-tab" href="https://pypi.org/project/delta-rest-client/#history" data-project-tabs-target="mobileTab" data-action="project-tabs#onTabClick" class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--mobile" aria-label="Release history. Focus will be moved to the history panel.">
+                <i class="fa fa-history" aria-hidden="true"></i>
+Release history              </a>
+            </li>
+              <li role="tab">
+                <a id="mobile-files-tab" href="https://pypi.org/project/delta-rest-client/#files" data-project-tabs-target="mobileTab" data-action="project-tabs#onTabClick" class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--mobile" aria-label="Download files. Focus will be moved to the project files.">
+                  <i class="fa fa-download" aria-hidden="true"></i>
+Download files                </a>
+              </li>
+          </ul>
+        </nav>
+        <div id="description" data-project-tabs-target="content" class="vertical-tabs__content" role="tabpanel" aria-labelledby="description-tab mobile-description-tab" tabindex="-1" style="display: block;">
+    <h2 class="page-title">Project description</h2>
+      <div class="project-description"><h1>Python Rest Client for Delta Api</h1>
+<p>Delta Exchange is a crypto derivatives exchange where you can trade bitcoin, ethereum, ripple futures upto 100x leverage. This package is a wrapper around rest apis of Delta Exchange.
+User Guide - <a href="https://www.delta.exchange/user-guide" rel="nofollow">https://www.delta.exchange/user-guide</a>
+API Documentation - <a href="https://docs.delta.exchange/" rel="nofollow">https://docs.delta.exchange</a></p>
+<p>Please read the <a href="https://github.com/delta-exchange/python-rest-client/blob/master/changelog.md" rel="nofollow">Changelog</a> before using this package.</p>
+<h1>Get started</h1>
+<ol>
+<li>Create an account on Testnet-India: <a href="https://testnet.delta.exchange/" rel="nofollow">https://testnet.delta.exchange/</a><br>
+For non-Indian customers use Testnet-Global: <a href="https://testnet-global.delta.exchange/" rel="nofollow">https://testnet-global.delta.exchange/</a></li>
+<li>Install the package:
+<pre><code>pip install delta-rest-client
+</code></pre>
+</li>
+<li>Follow the below snippet to trade on testnet:</li>
+</ol>
+<pre><code>from delta_rest_client import DeltaRestClient
+
+delta_client = DeltaRestClient(
+  base_url='https://cdn-ind.testnet.deltaex.org',
+  api_key='',
+  api_secret=''
+)
+</code></pre>
+<pre><code>base_url for different environments:
+Production-India : https://api.india.delta.exchange
+(Site at: https://india.delta.exchange/)
+
+Testnet-India : https://cdn-ind.testnet.deltaex.org
+(Site at: https://testnet.delta.exchange/)
+
+Production-Global : https://api.delta.exchange
+(Site at: https://www.delta.exchange/)
+
+Testnet-Global : https://testnet-api.delta.exchange
+(Site at: https://testnet-global.delta.exchange/)
+</code></pre>
+<ol start="4">
+<li>Get json list of available contracts to trade from given url and note down the product_id and asset_id, as it will be used in most of the api calls.</li>
+</ol>
+<h2>Methods</h2>
+<blockquote>
+<p><strong>Get Assets</strong></p>
+</blockquote>
+<p>Get list of assets supported on Delta.</p>
+<pre><code>response = delta_client.get_assets()
+</code></pre>
+<blockquote>
+<p><strong>Get Product Detail</strong></p>
+</blockquote>
+<p>Get product detail of current product.
+<a href="https://docs.delta.exchange/#delta-exchange-api-products" rel="nofollow">See sample response</a></p>
+<pre><code>product = delta_client.get_product(product_id) # Current Instrument
+settling_asset = product['settling_asset'] # Currency in which the pnl will be realised
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>product_id</td>
+<td><code>integer</code></td>
+<td>id of product</td>
+<td>true</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Get Ticker Data</strong></p>
+</blockquote>
+<p><a href="https://docs.delta.exchange/#get-24hr-ticker" rel="nofollow">See sample response</a></p>
+<pre><code>response = delta_client.get_ticker(symbol)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>symbol</td>
+<td><code>string</code></td>
+<td>product symbol</td>
+<td>true</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Get Orderbook</strong></p>
+</blockquote>
+<p>Get level-2 orderbook of the product.
+<a href="https://docs.delta.exchange/#delta-exchange-api-orderbook" rel="nofollow">See sample response</a></p>
+<pre><code>response = delta_client.get_l2_orderbook(product_id)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>product_id</td>
+<td><code>integer</code></td>
+<td>id of product</td>
+<td>true</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Open Orders</strong></p>
+</blockquote>
+<p>Get open orders.
+Authorization required. <a href="https://docs.delta.exchange/#get-orders" rel="nofollow">See sample response</a></p>
+<pre><code>orders = delta_client.get_live_orders()
+</code></pre>
+<blockquote>
+<p><strong>Place Order</strong></p>
+</blockquote>
+<p>Create a new market order or limit order.
+Authorization required. <a href="https://docs.delta.exchange/#place-order" rel="nofollow">See sample response</a></p>
+<pre><code>order_response = delta_client.place_stop_order(
+        product_id=product_id,
+        size=10,
+        side='sell',
+				limit_price='7800',
+        order_type=OrderType.LIMIT,
+     		time_in_force=TimeInForce.FOK
+        reduce_only='false'
+    )
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>product_id</td>
+<td><code>int</code></td>
+<td>id of product</td>
+<td>true</td>
+</tr>
+<tr>
+<td>size</td>
+<td><code>int</code></td>
+<td>order size</td>
+<td>true</td>
+</tr>
+<tr>
+<td>side</td>
+<td><code>string</code></td>
+<td>buy or sell</td>
+<td>true</td>
+</tr>
+<tr>
+<td>limit_price</td>
+<td><code>string</code></td>
+<td>order price (ignored if market order)</td>
+<td>false</td>
+</tr>
+<tr>
+<td>order_type</td>
+<td><code>string</code></td>
+<td>limit or market</td>
+<td>false (LIMIT by default)</td>
+</tr>
+<tr>
+<td>time_in_force</td>
+<td><code>string</code></td>
+<td>IOC or GTC or FOK</td>
+<td>false (GTC by default)</td>
+</tr>
+<tr>
+<td>post_only</td>
+<td><code>string</code></td>
+<td>maker order (true or false)</td>
+<td>false (false by default)</td>
+</tr>
+<tr>
+<td>reduce_only</td>
+<td><code>string</code></td>
+<td>reduce only order (true or false)</td>
+<td>false (false by default)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Place Stop Order</strong></p>
+</blockquote>
+<p>Add stop loss or trailing stop loss.
+Authorization required. <a href="https://docs.delta.exchange/#place-order" rel="nofollow">See sample response</a></p>
+<pre><code># Trailing Stop loss
+order_response = delta_client.place_stop_order(
+        product_id=product_id,
+        size=10,
+        side='sell',
+				limit_price='7800',
+        order_type=OrderType.LIMIT,
+        trail_amount='20',
+        isTrailingStopLoss=True
+    )
+
+# Stop loss
+order_response = delta_client.place_stop_order(
+        product_id=product_id,
+        size=10,
+        side='sell',
+        order_type=OrderType.MARKET,
+        stop_price='8010.5',
+    )
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>product_id</td>
+<td><code>int</code></td>
+<td>id of product</td>
+<td>true</td>
+</tr>
+<tr>
+<td>size</td>
+<td><code>int</code></td>
+<td>order size</td>
+<td>true</td>
+</tr>
+<tr>
+<td>side</td>
+<td><code>string</code></td>
+<td>buy or sell</td>
+<td>true</td>
+</tr>
+<tr>
+<td>stop_price</td>
+<td><code>string</code></td>
+<td>price at which order will be triggered</td>
+<td>false(required if stop_loss)</td>
+</tr>
+<tr>
+<td>trail_amount</td>
+<td><code>string</code></td>
+<td>trail price</td>
+<td>false(required if trailing_stop_loss)</td>
+</tr>
+<tr>
+<td>limit_price</td>
+<td><code>string</code></td>
+<td>order price (ignored if market order)</td>
+<td>false</td>
+</tr>
+<tr>
+<td>order_type</td>
+<td><code>string</code></td>
+<td>limit or market</td>
+<td>false (LIMIT by default)</td>
+</tr>
+<tr>
+<td>time_in_force</td>
+<td><code>string</code></td>
+<td>IOC or GTC or FOK</td>
+<td>false (GTC by default)</td>
+</tr>
+<tr>
+<td>isTrailingStopLoss</td>
+<td><code>string</code></td>
+<td>true or false</td>
+<td>false (false by default)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Cancel Order</strong></p>
+</blockquote>
+<p>Delete open order.
+Authorization required. <a href="https://docs.delta.exchange/#cancel-order" rel="nofollow">See sample response</a></p>
+<pre><code>cancel_response = delta_client.cancel_order(product_id, order_id)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>product_id</td>
+<td><code>int</code></td>
+<td>id of product</td>
+<td>true</td>
+</tr>
+<tr>
+<td>order_id</td>
+<td><code>int</code></td>
+<td>order id</td>
+<td>true</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Batch Create Orders</strong></p>
+</blockquote>
+<p>Create multiple limit orders. Max number of order is 5.
+Authorization required. <a href="https://docs.delta.exchange/#create-batch-orders" rel="nofollow">See sample response</a></p>
+<pre><code>response = delta_client.batch_create(product_id, orders)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>order</td>
+<td><code>array</code></td>
+<td>array of orders</td>
+<td>true</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Batch Cancel Orders</strong></p>
+</blockquote>
+<p>Cancel multiple open orders. Max number of order is 5.
+Authorization required. <a href="https://docs.delta.exchange/#delele-batch-orders" rel="nofollow">See sample response</a></p>
+<pre><code>response = delta_client.batch_cancel(product_id, orders)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>order</td>
+<td><code>array</code></td>
+<td>array of orders</td>
+<td>true</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Change Order Leverage</strong></p>
+</blockquote>
+<p>Change leverage for new orders.
+Authorization required. <a href="https://docs.delta.exchange/#change-order-leverage" rel="nofollow">See sample response</a></p>
+<pre><code>response = delta_client.set_leverage(product_id, leverage)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>product_id</td>
+<td><code>integer</code></td>
+<td>id of product</td>
+<td>true</td>
+</tr>
+<tr>
+<td>leverage</td>
+<td><code>string</code></td>
+<td>leverage value</td>
+<td>true</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Open Position</strong></p>
+</blockquote>
+<p>Current open position of product.
+Authorization required. <a href="https://docs.delta.exchange/#get-open-positions" rel="nofollow">See sample response</a></p>
+<pre><code>response = delta_client.get_position(product_id)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>product_id</td>
+<td><code>integer</code></td>
+<td>id of product</td>
+<td>true</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Change Leverage Positions</strong></p>
+</blockquote>
+<p>Change leverage for open position by adding or removing margin to an open position.
+Authorization required. <a href="https://docs.delta.exchange/#add-remove-position-margin" rel="nofollow">See sample response</a></p>
+<pre><code>response = delta_client.change_position_margin(product_id, margin)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>product_id</td>
+<td><code>integer</code></td>
+<td>id of product</td>
+<td>true</td>
+</tr>
+<tr>
+<td>margin</td>
+<td><code>string</code></td>
+<td>new margin</td>
+<td>true</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Get Wallet Balances</strong></p>
+</blockquote>
+<p>Get user's balance.
+Authorization required. <a href="https://docs.delta.exchange/#get-wallet-balances" rel="nofollow">See sample response</a></p>
+<pre><code>response = delta_client.get_balances(asset_id)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>asset_id</td>
+<td><code>integer</code></td>
+<td>id of asset</td>
+<td>true</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Order History</strong></p>
+</blockquote>
+<pre><code>query = { "product_id": 27 }
+response = delta_client.order_history(query, page_size=100)
+old_orders = response['result']
+after_cursor_for_next_page = response["meta"]["after"]
+more_orders = delta_client.order_history(query, page_size=100, after=after_cursor_for_next_page)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>page_size</td>
+<td><code>integer</code></td>
+<td>page size</td>
+<td>false</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Fills</strong></p>
+</blockquote>
+<p>Get fill history of your orders</p>
+<pre><code>query = { "contract_types": "futures,interest_rate_swaps" }
+response = delta_client.fills(query, page_size=100)
+
+fills = response['result']
+after_cursor_for_next_page = response["meta"]["after"]
+more_fills = delta_client.fills(query, page_size=100, after=after_cursor_for_next_page)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>page_size</td>
+<td><code>integer</code></td>
+<td>page size</td>
+<td>false</td>
+</tr>
+</tbody>
+</table>
+</div>
+  </div>
+  <div id="data" data-project-tabs-target="content" class="vertical-tabs__content" role="tabpanel" aria-labelledby="mobile-data-tab" tabindex="-1" style="display: none;">
+    <h2 class="page-title">Project details</h2>
+<div class="sidebar-section verified">
+  <h3 class="sidebar-section__title">
+Verified details    <i class="fa fa-circle-check check" title="Verified by PyPI on 2026-04-23"></i>
+  </h3>
+  <small><i>These details have been <a href="https://docs.pypi.org/project_metadata/#verified-details">verified by PyPI</a></i></small>
+    <h6>Maintainers</h6>
+      <span class="sidebar-section__maintainer">
+        <a href="https://pypi.org/user/dev_at_deltaex/" aria-label="">
+          <span class="sidebar-section__user-gravatar">
+            <img src="./delta-rest-client · PyPI_files/68747470733a2f2f7365637572652e67726176617461722e636f6d2f6176617461722f31633064333933323135643133346362386435346633316636383932393932363f73697a653d3530" height="50" width="50" alt="Avatar for dev_at_deltaex from gravatar.com" title="Avatar for dev_at_deltaex from gravatar.com">
+          </span>
+          <span class="sidebar-section__user-gravatar-text">dev_at_deltaex</span>
+        </a>
+      </span>
+      <span class="sidebar-section__maintainer">
+        <a href="https://pypi.org/user/mohdarif/" aria-label="">
+          <span class="sidebar-section__user-gravatar">
+            <img src="./delta-rest-client · PyPI_files/68747470733a2f2f7365637572652e67726176617461722e636f6d2f6176617461722f31353939633237303363323864353339616335386661386566363933316431643f73697a653d3530" height="50" width="50" alt="Avatar for mohdarif from gravatar.com" title="Avatar for mohdarif from gravatar.com">
+          </span>
+          <span class="sidebar-section__user-gravatar-text">mohdarif</span>
+        </a>
+      </span>
+      <span class="sidebar-section__maintainer">
+        <a href="https://pypi.org/user/saurabh.goyal/" aria-label="">
+          <span class="sidebar-section__user-gravatar">
+            <img src="./delta-rest-client · PyPI_files/68747470733a2f2f7365637572652e67726176617461722e636f6d2f6176617461722f66323130623563303837373330666165653437336231353632623634636664663f73697a653d3530" height="50" width="50" alt="Avatar for saurabh.goyal from gravatar.com" title="Avatar for saurabh.goyal from gravatar.com">
+          </span>
+          <span class="sidebar-section__user-gravatar-text">saurabh.goyal</span>
+        </a>
+      </span>
+</div>
+<div class="sidebar-section unverified">
+  <h3 class="sidebar-section__title">Unverified details</h3>
+  <small><i>These details have <b>not</b> been verified by PyPI</i></small>
+    <h6>Project links</h6>
+    <ul class="vertical-tabs__list">
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed" href="https://github.com/delta-exchange/python-rest-client" rel="nofollow">  <i class="fas fa-home" aria-hidden="true"></i>Homepage</a>
+          </li>
+    </ul>
+    <div class="sidebar-section unverified">
+      <h6>Meta</h6>
+      <ul>
+          <li>
+            <span>
+              <strong>License:</strong> MIT License
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Author:</strong> <a href="mailto:me@arbaaz.io">Arbaaz</a>
+            </span>
+          </li>
+      </ul>
+    </div>
+    <div class="sidebar-section unverified">
+      <h6 class="sidebar-section__title">Classifiers</h6>
+      <ul class="sidebar-section__classifiers">
+          <li>
+            <strong>License</strong>
+            <ul>
+                <li>
+                  <a href="https://pypi.org/search/?c=License+%3A%3A+OSI+Approved+%3A%3A+MIT+License">
+                    OSI Approved :: MIT License
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Operating System</strong>
+            <ul>
+                <li>
+                  <a href="https://pypi.org/search/?c=Operating+System+%3A%3A+OS+Independent">
+                    OS Independent
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Programming Language</strong>
+            <ul>
+                <li>
+                  <a href="https://pypi.org/search/?c=Programming+Language+%3A%3A+Python+%3A%3A+3">
+                    Python :: 3
+                  </a>
+                </li>
+            </ul>
+          </li>
+      </ul>
+    </div>
+</div>    <br>
+  </div>
+  <div id="history" data-project-tabs-target="content" class="vertical-tabs__content" role="tabpanel" aria-labelledby="history-tab mobile-history-tab" tabindex="-1" style="display: none;">
+    <h2 class="page-title split-layout">
+      <span>Release history</span>
+      <span class="reset-text margin-top">
+        <a href="https://pypi.org/help/#project-release-notifications">Release notifications</a> |
+        <a href="https://pypi.org/rss/project/delta-rest-client/releases.xml">RSS feed <i class="fa fa-rss" aria-hidden="true"></i></a>
+      </span>
+    </h2>
+    <div class="release-timeline">
+        <div class="release release--latest release--current">
+          <div class="release__meta">
+              <span class="badge">This version</span>
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/blue-cube.572a5bfb.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/1.0.14/">
+            <p class="release__version">
+              1.0.14
+            </p>
+            <p class="release__version-date"><time datetime="2026-04-23T10:51:23+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2026-04-23 16:21:23 (+05:30)" aria-label="2026-04-23 16:21:23 (+05:30)">Apr 23, 2026</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/1.0.13/">
+            <p class="release__version">
+              1.0.13
+            </p>
+            <p class="release__version-date"><time datetime="2025-08-06T07:25:43+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2025-08-06 12:55:43 (+05:30)" aria-label="2025-08-06 12:55:43 (+05:30)">Aug 6, 2025</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/1.0.12/">
+            <p class="release__version">
+              1.0.12
+            </p>
+            <p class="release__version-date"><time datetime="2024-10-28T11:27:39+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2024-10-28 16:57:39 (+05:30)" aria-label="2024-10-28 16:57:39 (+05:30)">Oct 28, 2024</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/1.0.11/">
+            <p class="release__version">
+              1.0.11
+            </p>
+            <p class="release__version-date"><time datetime="2024-10-15T06:56:55+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2024-10-15 12:26:55 (+05:30)" aria-label="2024-10-15 12:26:55 (+05:30)">Oct 15, 2024</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/1.0.10/">
+            <p class="release__version">
+              1.0.10
+            </p>
+            <p class="release__version-date"><time datetime="2024-08-20T07:12:49+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2024-08-20 12:42:49 (+05:30)" aria-label="2024-08-20 12:42:49 (+05:30)">Aug 20, 2024</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/1.0.9/">
+            <p class="release__version">
+              1.0.9
+            </p>
+            <p class="release__version-date"><time datetime="2023-12-19T09:44:38+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2023-12-19 15:14:38 (+05:30)" aria-label="2023-12-19 15:14:38 (+05:30)">Dec 19, 2023</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/1.0.8/">
+            <p class="release__version">
+              1.0.8
+            </p>
+            <p class="release__version-date"><time datetime="2021-09-24T12:56:37+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2021-09-24 18:26:37 (+05:30)" aria-label="2021-09-24 18:26:37 (+05:30)">Sep 24, 2021</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/1.0.7/">
+            <p class="release__version">
+              1.0.7
+            </p>
+            <p class="release__version-date"><time datetime="2021-09-17T14:20:52+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2021-09-17 19:50:52 (+05:30)" aria-label="2021-09-17 19:50:52 (+05:30)">Sep 17, 2021</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/1.0.6/">
+            <p class="release__version">
+              1.0.6
+            </p>
+            <p class="release__version-date"><time datetime="2021-04-09T13:13:01+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2021-04-09 18:43:01 (+05:30)" aria-label="2021-04-09 18:43:01 (+05:30)">Apr 9, 2021</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/1.0.5/">
+            <p class="release__version">
+              1.0.5
+            </p>
+            <p class="release__version-date"><time datetime="2021-02-18T13:35:52+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2021-02-18 19:05:52 (+05:30)" aria-label="2021-02-18 19:05:52 (+05:30)">Feb 18, 2021</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/1.0.4/">
+            <p class="release__version">
+              1.0.4
+            </p>
+            <p class="release__version-date"><time datetime="2020-11-10T06:02:33+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2020-11-10 11:32:33 (+05:30)" aria-label="2020-11-10 11:32:33 (+05:30)">Nov 10, 2020</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/1.0.3/">
+            <p class="release__version">
+              1.0.3
+            </p>
+            <p class="release__version-date"><time datetime="2020-11-06T13:15:49+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2020-11-06 18:45:49 (+05:30)" aria-label="2020-11-06 18:45:49 (+05:30)">Nov 6, 2020</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/1.0.2/">
+            <p class="release__version">
+              1.0.2
+            </p>
+            <p class="release__version-date"><time datetime="2020-08-18T03:46:53+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2020-08-18 09:16:53 (+05:30)" aria-label="2020-08-18 09:16:53 (+05:30)">Aug 18, 2020</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/1.0.1/">
+            <p class="release__version">
+              1.0.1
+            </p>
+            <p class="release__version-date"><time datetime="2020-06-23T16:50:24+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2020-06-23 22:20:24 (+05:30)" aria-label="2020-06-23 22:20:24 (+05:30)">Jun 23, 2020</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/1.0.0/">
+            <p class="release__version">
+              1.0.0
+            </p>
+            <p class="release__version-date"><time datetime="2020-06-18T15:33:39+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2020-06-18 21:03:39 (+05:30)" aria-label="2020-06-18 21:03:39 (+05:30)">Jun 18, 2020</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.1.15/">
+            <p class="release__version">
+              0.1.15
+            </p>
+            <p class="release__version-date"><time datetime="2020-03-16T12:44:45+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2020-03-16 18:14:45 (+05:30)" aria-label="2020-03-16 18:14:45 (+05:30)">Mar 16, 2020</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.1.14/">
+            <p class="release__version">
+              0.1.14
+            </p>
+            <p class="release__version-date"><time datetime="2020-02-19T15:02:16+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2020-02-19 20:32:16 (+05:30)" aria-label="2020-02-19 20:32:16 (+05:30)">Feb 19, 2020</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.1.13/">
+            <p class="release__version">
+              0.1.13
+            </p>
+            <p class="release__version-date"><time datetime="2020-02-19T11:23:20+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2020-02-19 16:53:20 (+05:30)" aria-label="2020-02-19 16:53:20 (+05:30)">Feb 19, 2020</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.1.12/">
+            <p class="release__version">
+              0.1.12
+            </p>
+            <p class="release__version-date"><time datetime="2019-11-08T13:56:58+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2019-11-08 19:26:58 (+05:30)" aria-label="2019-11-08 19:26:58 (+05:30)">Nov 8, 2019</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.1.11/">
+            <p class="release__version">
+              0.1.11
+            </p>
+            <p class="release__version-date"><time datetime="2019-05-14T19:44:49+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2019-05-15 01:14:49 (+05:30)" aria-label="2019-05-15 01:14:49 (+05:30)">May 15, 2019</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.1.10/">
+            <p class="release__version">
+              0.1.10
+            </p>
+            <p class="release__version-date"><time datetime="2019-05-14T06:44:49+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2019-05-14 12:14:49 (+05:30)" aria-label="2019-05-14 12:14:49 (+05:30)">May 14, 2019</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.1.9/">
+            <p class="release__version">
+              0.1.9
+            </p>
+            <p class="release__version-date"><time datetime="2019-04-17T17:42:49+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2019-04-17 23:12:49 (+05:30)" aria-label="2019-04-17 23:12:49 (+05:30)">Apr 17, 2019</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.1.8/">
+            <p class="release__version">
+              0.1.8
+            </p>
+            <p class="release__version-date"><time datetime="2019-04-16T10:15:46+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2019-04-16 15:45:46 (+05:30)" aria-label="2019-04-16 15:45:46 (+05:30)">Apr 16, 2019</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.1.7/">
+            <p class="release__version">
+              0.1.7
+            </p>
+            <p class="release__version-date"><time datetime="2019-03-27T15:30:51+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2019-03-27 21:00:51 (+05:30)" aria-label="2019-03-27 21:00:51 (+05:30)">Mar 27, 2019</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.1.6/">
+            <p class="release__version">
+              0.1.6
+            </p>
+            <p class="release__version-date"><time datetime="2019-03-06T07:54:13+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2019-03-06 13:24:13 (+05:30)" aria-label="2019-03-06 13:24:13 (+05:30)">Mar 6, 2019</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.1.5/">
+            <p class="release__version">
+              0.1.5
+            </p>
+            <p class="release__version-date"><time datetime="2019-02-27T12:22:36+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2019-02-27 17:52:36 (+05:30)" aria-label="2019-02-27 17:52:36 (+05:30)">Feb 27, 2019</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.1.4/">
+            <p class="release__version">
+              0.1.4
+            </p>
+            <p class="release__version-date"><time datetime="2019-02-13T13:07:25+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2019-02-13 18:37:25 (+05:30)" aria-label="2019-02-13 18:37:25 (+05:30)">Feb 13, 2019</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.1.3/">
+            <p class="release__version">
+              0.1.3
+            </p>
+            <p class="release__version-date"><time datetime="2019-02-04T12:19:10+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2019-02-04 17:49:10 (+05:30)" aria-label="2019-02-04 17:49:10 (+05:30)">Feb 4, 2019</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.1.2/">
+            <p class="release__version">
+              0.1.2
+            </p>
+            <p class="release__version-date"><time datetime="2018-10-16T14:34:36+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2018-10-16 20:04:36 (+05:30)" aria-label="2018-10-16 20:04:36 (+05:30)">Oct 16, 2018</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.1.1/">
+            <p class="release__version">
+              0.1.1
+            </p>
+            <p class="release__version-date"><time datetime="2018-10-06T08:22:12+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2018-10-06 13:52:12 (+05:30)" aria-label="2018-10-06 13:52:12 (+05:30)">Oct 6, 2018</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.1.0/">
+            <p class="release__version">
+              0.1.0
+            </p>
+            <p class="release__version-date"><time datetime="2018-10-06T06:03:25+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2018-10-06 11:33:25 (+05:30)" aria-label="2018-10-06 11:33:25 (+05:30)">Oct 6, 2018</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.0.10/">
+            <p class="release__version">
+              0.0.10
+            </p>
+            <p class="release__version-date"><time datetime="2018-09-18T08:32:54+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2018-09-18 14:02:54 (+05:30)" aria-label="2018-09-18 14:02:54 (+05:30)">Sep 18, 2018</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.0.9/">
+            <p class="release__version">
+              0.0.9
+            </p>
+            <p class="release__version-date"><time datetime="2018-09-10T12:43:36+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2018-09-10 18:13:36 (+05:30)" aria-label="2018-09-10 18:13:36 (+05:30)">Sep 10, 2018</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.0.8/">
+            <p class="release__version">
+              0.0.8
+            </p>
+            <p class="release__version-date"><time datetime="2018-09-04T10:21:13+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2018-09-04 15:51:13 (+05:30)" aria-label="2018-09-04 15:51:13 (+05:30)">Sep 4, 2018</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.0.7/">
+            <p class="release__version">
+              0.0.7
+            </p>
+            <p class="release__version-date"><time datetime="2018-09-03T13:54:55+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2018-09-03 19:24:55 (+05:30)" aria-label="2018-09-03 19:24:55 (+05:30)">Sep 3, 2018</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.0.6/">
+            <p class="release__version">
+              0.0.6
+            </p>
+            <p class="release__version-date"><time datetime="2018-09-03T13:43:22+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2018-09-03 19:13:22 (+05:30)" aria-label="2018-09-03 19:13:22 (+05:30)">Sep 3, 2018</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.0.5/">
+            <p class="release__version">
+              0.0.5
+            </p>
+            <p class="release__version-date"><time datetime="2018-08-30T13:24:03+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2018-08-30 18:54:03 (+05:30)" aria-label="2018-08-30 18:54:03 (+05:30)">Aug 30, 2018</time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.0.4/">
+            <p class="release__version">
+              0.0.4
+            </p>
+            <p class="release__version-date"><time datetime="2018-08-30T13:22:15+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2018-08-30 18:52:15 (+05:30)" aria-label="2018-08-30 18:52:15 (+05:30)">Aug 30, 2018</time></p>
+          </a>
+        </div>
+        <div class="release release--oldest">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card" href="https://pypi.org/project/delta-rest-client/0.0.3/">
+            <p class="release__version">
+              0.0.3
+            </p>
+            <p class="release__version-date"><time datetime="2018-08-30T13:09:01+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2018-08-30 18:39:01 (+05:30)" aria-label="2018-08-30 18:39:01 (+05:30)">Aug 30, 2018</time></p>
+          </a>
+        </div>
+    </div>
+  </div>
+    <div id="files" data-project-tabs-target="content" class="vertical-tabs__content" role="tabpanel" aria-labelledby="files-tab mobile-files-tab" tabindex="-1" data-controller="filter-list" style="display: none;">
+      <h2 class="page-title">Download files</h2>
+      <p>
+Download the file for your platform. If you're not sure which to choose, learn more about <a href="https://packaging.python.org/tutorials/installing-packages/" title="External link" target="_blank" rel="noopener">installing packages</a>.      </p>
+      <h3>
+Source Distribution    </h3>
+          <div class="file">
+      <div class="file__graphic">
+        <i class="far fa-file" aria-hidden="true"></i>
+      </div>
+      <div class="card file__card">
+        <a href="https://files.pythonhosted.org/packages/48/94/fcb6f1530f96973f6356a31bdda6b456cb7bc070bb671e890a3e8ff36f53/delta_rest_client-1.0.14.tar.gz">delta_rest_client-1.0.14.tar.gz</a>
+        (9.0 kB
+        <a href="https://pypi.org/project/delta-rest-client/#delta_rest_client-1.0.14.tar.gz" data-project-tabs-target="tab mobileTab" data-action="project-tabs#onTabClick">view details</a>)
+        <p class="file__meta">
+          Uploaded <time datetime="2026-04-23T10:51:24+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2026-04-23 16:21:24 (+05:30)" aria-label="2026-04-23 16:21:24 (+05:30)">Apr 23, 2026</time>
+<code>Source</code>        </p>
+      </div>
+    </div>
+
+      <h3>
+Built Distribution    </h3>
+    <p class="initial-toggle-visibility">
+Filter files by name, interpreter, ABI, and platform.    </p>
+    <p>
+If you're not sure about the file name format, learn more about <a href="https://packaging.python.org/en/latest/specifications/binary-distribution-format/" title="External link" target="_blank" rel="noopener">wheel file names</a>.    </p>
+    <noscript>
+      <p class="initial-toggle-visibility">
+The dropdown lists show the available interpreters, ABIs, and platforms.      </p>
+      <p class="initial-toggle-visibility">
+Enable javascript to be able to filter the list of wheel files.      </p>
+    </noscript>
+    <p class="initial-toggle-visibility" data-controller="clipboard">
+Copy a direct link to the current filters      <a class="hidden" href="https://pypi.org/project/delta-rest-client/#files" data-clipboard-target="source" data-filter-list-target="url">https://pypi.org/project/delta-rest-client/#files</a>
+      <button type="button" class="button button--small copy-tooltip copy-tooltip-w" data-action="clipboard#copy" data-clipboard-target="tooltip" data-clipboard-tooltip-value="Copy to clipboard">
+Copy      </button>
+    </p>
+    <p class="initial-toggle-visibility">
+      <span data-filter-list-target="summary">Showing 1 of 1 file.</span>
+    </p>
+    <div>
+      <div class="form-group initial-toggle-visibility">
+        <label class="form-group__label sr-only" for="bdist-filenames-filter">File name</label>
+        <input class="form-group__field" type="text" id="bdist-filenames-filter" name="bdist-filenames-filter" placeholder="File name" autocapitalize="none" autocomplete="" spellcheck="false" data-action="filter-list#filter" data-filter-list-target="filter" data-filtered-source="filename">
+      </div>
+      <div class="col-grid">
+        <div class="form-group col-third">  <label class="form-group__label sr-only" for="bdist-tags-interpreters">Interpreter</label>
+  <select class="form-group__field" id="bdist-tags-interpreters" name="bdist-tags-interpreters" data-action="filter-list#filter" data-filter-list-target="filter" data-filtered-source="interpreters">
+    <option selected="" value="">Interpreter</option>
+      <option value="py3">py3</option>
+  </select>
+</div>
+        <div class="form-group col-third">  <label class="form-group__label sr-only" for="bdist-tags-abis">ABI</label>
+  <select class="form-group__field" id="bdist-tags-abis" name="bdist-tags-abis" data-action="filter-list#filter" data-filter-list-target="filter" data-filtered-source="abis">
+    <option selected="" value="">ABI</option>
+      <option value="none">none</option>
+  </select>
+</div>
+        <div class="form-group col-third">  <label class="form-group__label sr-only" for="bdist-tags-platforms">Platform</label>
+  <select class="form-group__field" id="bdist-tags-platforms" name="bdist-tags-platforms" data-action="filter-list#filter" data-filter-list-target="filter" data-filtered-source="platforms">
+    <option selected="" value="">Platform</option>
+      <option value="any">any</option>
+  </select>
+</div>
+      </div>
+    </div>
+        <div class="file" data-filter-list-target="item" data-filtered-target-filename="[&quot;delta_rest_client-1.0.14-py3-none-any.whl&quot;]" data-filtered-target-interpreters="[&quot;py3&quot;]" data-filtered-target-abis="[&quot;none&quot;]" data-filtered-target-platforms="[&quot;any&quot;]">
+      <div class="file__graphic">
+        <i class="far fa-file" aria-hidden="true"></i>
+      </div>
+      <div class="card file__card">
+        <a href="https://files.pythonhosted.org/packages/2e/72/12415938f2161273f910278b20faa3c50ff3711580eb249b168b76a01d1e/delta_rest_client-1.0.14-py3-none-any.whl">delta_rest_client-1.0.14-py3-none-any.whl</a>
+        (7.7 kB
+        <a href="https://pypi.org/project/delta-rest-client/#delta_rest_client-1.0.14-py3-none-any.whl" data-project-tabs-target="tab mobileTab" data-action="project-tabs#onTabClick">view details</a>)
+        <p class="file__meta">
+          Uploaded <time datetime="2026-04-23T10:51:23+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2026-04-23 16:21:23 (+05:30)" aria-label="2026-04-23 16:21:23 (+05:30)">Apr 23, 2026</time>
+<code>Python 3</code>        </p>
+      </div>
+    </div>
+
+</div>
+<div id="delta_rest_client-1.0.14.tar.gz" data-project-tabs-target="content" class="vertical-tabs__content" role="tabpanel" aria-labelledby="file-tab mobile-file-tab" tabindex="-1" style="display: none;">
+  <h2 class="page-title">File details</h2>
+  <p>
+    Details for the file <code>delta_rest_client-1.0.14.tar.gz</code>.
+  </p>
+  <h3>File metadata</h3>
+  <div>
+    <ul>
+      <li>
+        Download URL: <a href="https://files.pythonhosted.org/packages/48/94/fcb6f1530f96973f6356a31bdda6b456cb7bc070bb671e890a3e8ff36f53/delta_rest_client-1.0.14.tar.gz">delta_rest_client-1.0.14.tar.gz</a>
+      </li>
+      <li>Upload date: <time datetime="2026-04-23T10:51:24+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2026-04-23 16:21:24 (+05:30)" aria-label="2026-04-23 16:21:24 (+05:30)">Apr 23, 2026</time></li>
+      <li>
+Size: 9.0 kB      </li>
+      <li>Tags: Source</li>
+      <li>
+Uploaded using Trusted Publishing? No    </li>
+      <li>Uploaded via: twine/5.1.1 CPython/3.9.6</li>
+  </ul>
+</div>
+<h3>File hashes</h3>
+<div>
+  <table class="table table--hashes">
+    <caption class="sr-only">Hashes for delta_rest_client-1.0.14.tar.gz</caption>
+    <thead>
+      <tr>
+        <th scope="col">Algorithm</th>
+        <th scope="col">Hash digest</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-controller="clipboard">
+        <th scope="row">SHA256</th>
+        <td>
+          <code data-clipboard-target="source">d350340961d7867796fea1e5873d5982dda7d1f7c528d60ae60da0dd5d7f0cc6</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button" class="button button--small copy-tooltip copy-tooltip-w" data-action="clipboard#copy" data-clipboard-target="tooltip" data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+      <tr data-controller="clipboard">
+        <th scope="row">MD5</th>
+        <td>
+          <code data-clipboard-target="source">db916e9f8ccda196d28f5a9a6a4dc41d</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button" class="button button--small copy-tooltip copy-tooltip-w" data-action="clipboard#copy" data-clipboard-target="tooltip" data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+      <tr data-controller="clipboard">
+        <th scope="row">BLAKE2b-256</th>
+        <td>
+          <code data-clipboard-target="source">4894fcb6f1530f96973f6356a31bdda6b456cb7bc070bb671e890a3e8ff36f53</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button" class="button button--small copy-tooltip copy-tooltip-w" data-action="clipboard#copy" data-clipboard-target="tooltip" data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+<a href="https://pip.pypa.io/en/stable/topics/secure-installs/#hash-checking-mode" title="External link" target="_blank" rel="noopener">See more details on using hashes here.</a></p>
+</div>
+</div><div id="delta_rest_client-1.0.14-py3-none-any.whl" data-project-tabs-target="content" class="vertical-tabs__content" role="tabpanel" aria-labelledby="file-tab mobile-file-tab" tabindex="-1" style="display: none;">
+  <h2 class="page-title">File details</h2>
+  <p>
+    Details for the file <code>delta_rest_client-1.0.14-py3-none-any.whl</code>.
+  </p>
+  <h3>File metadata</h3>
+  <div>
+    <ul>
+      <li>
+        Download URL: <a href="https://files.pythonhosted.org/packages/2e/72/12415938f2161273f910278b20faa3c50ff3711580eb249b168b76a01d1e/delta_rest_client-1.0.14-py3-none-any.whl">delta_rest_client-1.0.14-py3-none-any.whl</a>
+      </li>
+      <li>Upload date: <time datetime="2026-04-23T10:51:23+0000" data-controller="localized-time" data-localized-time-relative="true" data-localized-time-show-time="false" title="2026-04-23 16:21:23 (+05:30)" aria-label="2026-04-23 16:21:23 (+05:30)">Apr 23, 2026</time></li>
+      <li>
+Size: 7.7 kB      </li>
+      <li>Tags: Python 3</li>
+      <li>
+Uploaded using Trusted Publishing? No    </li>
+      <li>Uploaded via: twine/5.1.1 CPython/3.9.6</li>
+  </ul>
+</div>
+<h3>File hashes</h3>
+<div>
+  <table class="table table--hashes">
+    <caption class="sr-only">Hashes for delta_rest_client-1.0.14-py3-none-any.whl</caption>
+    <thead>
+      <tr>
+        <th scope="col">Algorithm</th>
+        <th scope="col">Hash digest</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-controller="clipboard">
+        <th scope="row">SHA256</th>
+        <td>
+          <code data-clipboard-target="source">54cfdd74e6842f08c14a4e0100a529a36003d65dc84649b7b4ca43b4b8b1c587</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button" class="button button--small copy-tooltip copy-tooltip-w" data-action="clipboard#copy" data-clipboard-target="tooltip" data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+      <tr data-controller="clipboard">
+        <th scope="row">MD5</th>
+        <td>
+          <code data-clipboard-target="source">9594f553282f4e590591faeb3e48afdf</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button" class="button button--small copy-tooltip copy-tooltip-w" data-action="clipboard#copy" data-clipboard-target="tooltip" data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+      <tr data-controller="clipboard">
+        <th scope="row">BLAKE2b-256</th>
+        <td>
+          <code data-clipboard-target="source">2e7212415938f2161273f910278b20faa3c50ff3711580eb249b168b76a01d1e</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button" class="button button--small copy-tooltip copy-tooltip-w" data-action="clipboard#copy" data-clipboard-target="tooltip" data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+<a href="https://pip.pypa.io/en/stable/topics/secure-installs/#hash-checking-mode" title="External link" target="_blank" rel="noopener">See more details on using hashes here.</a></p>
+</div>
+</div></div>
+</div>
+</div>
+</div>
+</main>
+<footer class="footer">
+  <div class="footer__logo">
+    <img src="./delta-rest-client · PyPI_files/white-cube.2351a86c.svg" alt="" class="-js-white-cube">
+  </div>
+  <div class="footer__menus">
+    <div class="footer__menu">
+      <h2>Help</h2>
+      <nav aria-label="Help navigation">
+        <ul>
+          <li>
+            <a href="https://packaging.python.org/tutorials/installing-packages/" title="External link" target="_blank" rel="noopener">Installing packages</a>
+          </li>
+          <li>
+            <a href="https://packaging.python.org/tutorials/packaging-projects/" title="External link" target="_blank" rel="noopener">Uploading packages</a>
+          </li>
+          <li>
+            <a href="https://packaging.python.org/" title="External link" target="_blank" rel="noopener">User guide</a>
+          </li>
+          <li>
+            <a href="https://www.python.org/dev/peps/pep-0541/" title="External link" target="_blank" rel="noopener">Project name retention</a>
+          </li>
+          <li>
+            <a href="https://pypi.org/help/">FAQs</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer__menu">
+      <h2>About PyPI</h2>
+      <nav aria-label="About PyPI navigation">
+        <ul>
+          <li>
+            <a href="https://blog.pypi.org/" title="External link" target="_blank" rel="noopener">PyPI Blog</a>
+          </li>
+          <li>
+            <a href="https://dtdg.co/pypi" title="External link" target="_blank" rel="noopener">Infrastructure dashboard</a>
+          </li>
+          <li>
+            <a href="https://pypi.org/stats/">Statistics</a>
+          </li>
+          <li>
+            <a href="https://pypi.org/trademarks/">Logos &amp; trademarks</a>
+          </li>
+          <li>
+            <a href="https://pypi.org/sponsors/">Our sponsors</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer__menu">
+      <h2>Contributing to PyPI</h2>
+      <nav aria-label="How to contribute navigation">
+        <ul>
+          <li>
+            <a href="https://pypi.org/help/#feedback">Bugs and feedback</a>
+          </li>
+          <li>
+            <a href="https://github.com/pypi/warehouse" title="External link" target="_blank" rel="noopener">Contribute on GitHub</a>
+          </li>
+          <li>
+            <a href="https://hosted.weblate.org/projects/pypa/warehouse/" title="External link" target="_blank" rel="noopener">Translate PyPI</a>
+          </li>
+          <li>
+            <a href="https://pypi.org/sponsors/">Sponsor PyPI</a>
+          </li>
+          <li>
+            <a href="https://github.com/pypi/warehouse/graphs/contributors" title="External link" target="_blank" rel="noopener">Development credits</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer__menu">
+      <h2>Using PyPI</h2>
+      <nav aria-label="Using PyPI navigation">
+        <ul>
+          <li>
+            <a href="https://policies.python.org/pypi.org/Terms-of-Service/" title="External link" target="_blank" rel="noopener">Terms of Service</a>
+          </li>
+          <li>
+            <a href="https://pypi.org/security/">Report security issue</a>
+          </li>
+          <li>
+            <a href="https://policies.python.org/python.org/code-of-conduct/" title="External link" target="_blank" rel="noopener">Code of conduct</a>
+          </li>
+          <li>
+            <a href="https://policies.python.org/pypi.org/Privacy-Notice/" title="External link" target="_blank" rel="noopener">Privacy Notice</a>
+          </li>
+          <li>
+            <a href="https://policies.python.org/pypi.org/Acceptable-Use-Policy/" title="External link" target="_blank" rel="noopener">Acceptable Use Policy</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+  <hr class="footer__divider">
+  <div class="footer__text">
+      <p>
+Status:<a href="https://status.python.org/" title="External link" target="_blank" rel="noopener">
+        <span data-statuspage-domain="https://2p66nmmycsj3.statuspage.io">All Systems Operational</span></a>
+    </p>
+  <p>
+Developed and maintained by the Python community, for the Python community.    <br>
+    <a href="https://donate.pypi.org/">Donate today!</a>
+  </p>
+  <p>
+    "PyPI", "Python Package Index", and the blocks logos are registered <a href="https://pypi.org/trademarks/">trademarks</a> of the <a href="https://www.python.org/psf-landing" target="_blank" rel="noopener">Python Software Foundation</a>.
+    <br>
+  </p>
+  <p>
+    © 2026 <a href="https://www.python.org/psf-landing/" title="External link" target="_blank" rel="noopener">Python Software Foundation</a>
+    <br>
+    <a href="https://pypi.org/sitemap/">Site map</a>
+  </p>
+</div>
+<div class="centered hide-on-desktop">
+  <button type="button" class="button button--switch-to-desktop" data-viewport-toggle-target="switchToDesktop" data-action="viewport-toggle#switchToDesktop">Switch to desktop version</button>
+</div>
+</footer>
+<div class="language-switcher">
+  <form action="https://pypi.org/locale/">
+    <ul>
+        <li>
+          <button class="language-switcher__selected" name="locale_id" value="en" type="submit">English</button>
+        </li>
+        <li>
+          <button name="locale_id" value="es" type="submit">español</button>
+        </li>
+        <li>
+          <button name="locale_id" value="fr" type="submit">français</button>
+        </li>
+        <li>
+          <button name="locale_id" value="ja" type="submit">日本語</button>
+        </li>
+        <li>
+          <button name="locale_id" value="pt_BR" type="submit">português (Brasil)</button>
+        </li>
+        <li>
+          <button name="locale_id" value="uk" type="submit">українська</button>
+        </li>
+        <li>
+          <button name="locale_id" value="el" type="submit">Ελληνικά</button>
+        </li>
+        <li>
+          <button name="locale_id" value="de" type="submit">Deutsch</button>
+        </li>
+        <li>
+          <button name="locale_id" value="zh_Hans" type="submit">中文 (简体)</button>
+        </li>
+        <li>
+          <button name="locale_id" value="zh_Hant" type="submit">中文 (繁體)</button>
+        </li>
+        <li>
+          <button name="locale_id" value="ru" type="submit">русский</button>
+        </li>
+        <li>
+          <button name="locale_id" value="he" type="submit">עברית</button>
+        </li>
+        <li>
+          <button name="locale_id" value="eo" type="submit">Esperanto</button>
+        </li>
+        <li>
+          <button name="locale_id" value="ko" type="submit">한국어</button>
+        </li>
+    </ul>
+  </form>
+</div>
+<div class="sponsors">
+  <p class="sponsors__title">Supported by</p>
+  <div class="sponsors__divider"></div>
+        <a class="sponsors__sponsor" target="_blank" rel="noopener" href="https://aws.amazon.com/">
+          <img class="sponsors__image" src="./delta-rest-client · PyPI_files/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f6177732d77686974652d6c6f676f2d7443615473387a432e706e67" alt="" loading="lazy">
+          <span class="sponsors__name">AWS</span>
+          <span class="sponsors__service">
+              Cloud computing and Security Sponsor
+          </span>
+        </a>
+        <a class="sponsors__sponsor" target="_blank" rel="noopener" href="https://www.datadoghq.com/">
+          <img class="sponsors__image" src="./delta-rest-client · PyPI_files/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f64617461646f672d77686974652d6c6f676f2d6668644c4e666c6f2e706e67" alt="" loading="lazy">
+          <span class="sponsors__name">Datadog</span>
+          <span class="sponsors__service">
+              Monitoring
+          </span>
+        </a>
+        <a class="sponsors__sponsor" target="_blank" rel="noopener" href="https://depot.dev/">
+          <img class="sponsors__image" src="./delta-rest-client · PyPI_files/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f6465706f742d77686974652d6c6f676f2d7038506f476831302e706e67" alt="" loading="lazy">
+          <span class="sponsors__name">Depot</span>
+          <span class="sponsors__service">
+              Continuous Integration
+          </span>
+        </a>
+        <a class="sponsors__sponsor" target="_blank" rel="noopener" href="https://www.fastly.com/">
+          <img class="sponsors__image" src="./delta-rest-client · PyPI_files/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f666173746c792d77686974652d6c6f676f2d65684d3077735f6f2e706e67" alt="" loading="lazy">
+          <span class="sponsors__name">Fastly</span>
+          <span class="sponsors__service">
+              CDN
+          </span>
+        </a>
+        <a class="sponsors__sponsor" target="_blank" rel="noopener" href="https://careers.google.com/">
+          <img class="sponsors__image" src="./delta-rest-client · PyPI_files/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f676f6f676c652d77686974652d6c6f676f2d616734424e3774332e706e67" alt="" loading="lazy">
+          <span class="sponsors__name">Google</span>
+          <span class="sponsors__service">
+              Download Analytics
+          </span>
+        </a>
+        <a class="sponsors__sponsor" target="_blank" rel="noopener" href="https://www.pingdom.com/">
+          <img class="sponsors__image" src="./delta-rest-client · PyPI_files/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f70696e67646f6d2d77686974652d6c6f676f2d67355831547546362e706e67" alt="" loading="lazy">
+          <span class="sponsors__name">Pingdom</span>
+          <span class="sponsors__service">
+              Monitoring
+          </span>
+        </a>
+        <a class="sponsors__sponsor" target="_blank" rel="noopener" href="https://sentry.io/for/python/?utm_source=pypi&amp;utm_medium=paid-community&amp;utm_campaign=python-na-evergreen&amp;utm_content=static-ad-pypi-sponsor-learnmore">
+          <img class="sponsors__image" src="./delta-rest-client · PyPI_files/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f73656e7472792d77686974652d6c6f676f2d4a2d6b64742d706e2e706e67" alt="" loading="lazy">
+          <span class="sponsors__name">Sentry</span>
+          <span class="sponsors__service">
+              Error logging
+          </span>
+        </a>
+        <a class="sponsors__sponsor" target="_blank" rel="noopener" href="https://statuspage.io/">
+          <img class="sponsors__image" src="./delta-rest-client · PyPI_files/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f737461747573706167652d77686974652d6c6f676f2d5467476c6a4a2d502e706e67" alt="" loading="lazy">
+          <span class="sponsors__name">StatusPage</span>
+          <span class="sponsors__service">
+              Status page
+          </span>
+        </a>
+</div>
+</body></html>
