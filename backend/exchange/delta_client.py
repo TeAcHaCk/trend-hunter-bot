@@ -343,6 +343,11 @@ class DeltaClient:
             remaining = await self.get_open_orders(product_id)
             if remaining.get("success") and remaining.get("result"):
                 for order in remaining["result"]:
+                    # If we only want to cancel for a specific product, enforce it locally
+                    # in case the exchange API ignored the query parameter.
+                    if product_id is not None and order.get("product_id") != product_id:
+                        continue
+
                     # Preserve Bracket / SL / TP orders (they protect open positions).
                     # Protective orders ALWAYS have reduce_only = True.
                     # Entry orders ALWAYS have reduce_only = False.
