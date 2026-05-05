@@ -335,15 +335,29 @@ class DeltaClient:
         return await self._request("DELETE", "/v2/orders", data=payload, auth=True)
 
     async def cancel_all_orders(self, product_id: Optional[int] = None) -> Dict:
+        """Nuke ALL orders. Uses bulk delete, then actively hunts down and cancels stragglers."""
         payload = {"product_id": product_id} if product_id else {}
-        return await self._request("DELETE", "/v2/orders/all", data=payload, auth=True)
+        bulk_res = await self._request("DELETE", "/v2/orders/all", data=payload, auth=True)
+        
+        # Ensure stubborn orders (like Stop Market / pending) are actually removed
+        try:
+            remaining = await self.get_open_orders(product_id)
+            if remaining.get("success") and remaining.get("result"):
+                for order in remaining["result"]:
+                    try:
+                        await self.cancel_order(order["product_id"], order["id"])
+                    except Exception as order_e:
+                        logger.warning(f"Failed to cancel individual straggler {order['id']}: {order_e}")
+        except Exception as e:
+            logger.warning(f"Failed to fetch straggler orders for cleanup: {e}")
+            
+        return bulk_res
 
     async def get_open_orders(self, product_id: Optional[int] = None) -> Dict:
         """Fetch all open/pending orders from the exchange."""
         params = {}
         if product_id:
             params["product_id"] = product_id
-        params["state"] = "open"
         return await self._request("GET", "/v2/orders", params=params, auth=True)
 
     async def close_position(self, product_id: int,
