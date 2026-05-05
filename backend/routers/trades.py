@@ -39,12 +39,41 @@ async def _fetch_and_cache_trades():
         # Fetch from Delta Exchange API
         fills_res = await bot_runner.delta_client.get_fills(page_size=100)
         orders_res = await bot_runner.delta_client.get_order_history(page_size=100)
+        wallet_res = await bot_runner.delta_client.get_wallet_transactions(page_size=100)
+
+        # DEBUG: Dump to file so we can see the exact JSON structure
+        try:
+            import json
+            with open("delta_debug.json", "w") as f:
+                json.dump({
+                    "fills": fills_res,
+                    "orders": orders_res,
+                    "wallet": wallet_res
+                }, f, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to dump debug json: {e}")
 
         fills = fills_res.get("result", []) if isinstance(fills_res, dict) else []
         orders = orders_res.get("result", []) if isinstance(orders_res, dict) else []
+        wallet = wallet_res.get("result", []) if isinstance(wallet_res, dict) else []
 
         # Map orders by ID to identify TP/SL
         order_map = {str(o.get("id", "")): o for o in orders}
+
+        # Build mapping of order_id -> realized_pnl from wallet transactions
+        wallet_pnl_map = {}
+        wallet_fee_map = {}
+        for txn in wallet:
+            txn_type = txn.get("type", "")
+            meta = txn.get("meta", {})
+            # meta might have order_id or transaction_id
+            oid = str(meta.get("order_id", ""))
+            amount = float(txn.get("amount", 0) or 0)
+            
+            if txn_type == "realized_pnl" and oid:
+                wallet_pnl_map[oid] = wallet_pnl_map.get(oid, 0.0) + amount
+            elif txn_type == "trading_fee" and oid:
+                wallet_fee_map[oid] = wallet_fee_map.get(oid, 0.0) + amount
 
         # Fetch accurate PnL calculations from local bot DB
         pnl_map = {}
@@ -71,11 +100,16 @@ async def _fetch_and_cache_trades():
             
             # Parse PnL & Fee
             # 1. Try fill's realized_pnl
-            # 2. Try order's realized_pnl (Delta puts it here for closed orders!)
-            # 3. Fallback to Bot's accurate local TradeLog
+            # 2. Try order's realized_pnl
+            # 3. Try Wallet Ledger transactions (most reliable for Delta manual trades)
+            # 4. Fallback to Bot's accurate local TradeLog
             fill_pnl = float(fill.get("realized_pnl", 0) or 0)
             if fill_pnl == 0:
                 fill_pnl = float(order_obj.get("realized_pnl", 0) or 0)
+                
+            if fill_pnl == 0 and order_id in wallet_pnl_map:
+                fill_pnl = float(wallet_pnl_map[order_id])
+                del wallet_pnl_map[order_id]  # prevent double counting
                 
             if fill_pnl == 0 and order_id in pnl_map:
                 fill_pnl = float(pnl_map[order_id])
@@ -84,6 +118,9 @@ async def _fetch_and_cache_trades():
             fill_fee = float(fill.get("fee", 0) or 0)
             if fill_fee == 0:
                 fill_fee = float(order_obj.get("fee", 0) or 0)
+            if fill_fee == 0 and order_id in wallet_fee_map:
+                fill_fee = float(wallet_fee_map[order_id])
+                del wallet_fee_map[order_id]
             
             # For accurate stats, realized_pnl from delta is generally what we want
             total_pnl += fill_pnl
@@ -107,13 +144,13 @@ async def _fetch_and_cache_trades():
 
             # Determine Exit Type (TP/SL/Manual)
             exit_type = "Market/Manual"
-            order_id = str(fill.get("order_id", ""))
             
             if order_id and order_id in order_map:
                 o_type = order_map[order_id].get("order_type", "").lower()
-                if "take_profit" in o_type:
+                o_type_str = str(o_type)
+                if "take_profit" in o_type_str or "tp" in o_type_str:
                     exit_type = "TP"
-                elif "stop_loss" in o_type or "stop_limit" in o_type or "stop_market" in o_type:
+                elif "stop" in o_type_str or "sl" in o_type_str:
                     exit_type = "SL"
 
             # Fills symbol is typically returned as 'symbol' or 'product_symbol'
