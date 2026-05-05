@@ -766,6 +766,7 @@ async function loadTrades(page = 1) {
     if (result.success) {
         renderTradesTable(result.result);
         renderPagination(result.meta);
+        loadTradeStats();
     }
 }
 
@@ -822,7 +823,14 @@ function renderPagination(meta) {
 }
 
 async function loadTradeStats() {
-    const result = await apiGet('/api/trades/stats');
+    const start = getVal('filter-start') || '';
+    const end = getVal('filter-end') || '';
+
+    let query = '?';
+    if (start) query += `start_date=${start}&`;
+    if (end) query += `end_date=${end}&`;
+
+    const result = await apiGet(`/api/trades/stats${query}`);
     if (result.success) {
         const s = result.result;
         const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };

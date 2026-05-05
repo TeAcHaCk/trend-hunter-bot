@@ -181,12 +181,59 @@ async def get_trades(
 
 
 @router.get("/stats")
-async def get_trade_stats():
-    """Get trade statistics aggregated from Delta API history."""
+async def get_trade_stats(
+    start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)")
+):
+    """Get trade statistics aggregated from Delta API history, with optional date filtering."""
     cache = await _fetch_and_cache_trades()
+    trades = cache["trades"]
+
+    # Filter trades by date if provided
+    filtered = []
+    for t in trades:
+        if start_date:
+            try:
+                start = datetime.strptime(start_date, "%Y-%m-%d")
+                t_time = datetime.fromisoformat(t["timestamp"].replace("Z", ""))
+                if t_time < start:
+                    continue
+            except ValueError:
+                pass
+        if end_date:
+            try:
+                end = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+                t_time = datetime.fromisoformat(t["timestamp"].replace("Z", ""))
+                if t_time >= end:
+                    continue
+            except ValueError:
+                pass
+        filtered.append(t)
+
+    # Recalculate stats based on the filtered trades
+    total_closed = len(filtered)
+    total_pnl = sum(float(t["pnl"]) for t in filtered)
+    total_wins = sum(1 for t in filtered if float(t["pnl"]) > 0)
+    
+    gross_profit = sum(float(t["pnl"]) for t in filtered if float(t["pnl"]) > 0)
+    gross_loss = abs(sum(float(t["pnl"]) for t in filtered if float(t["pnl"]) < 0))
+    profit_factor = round(gross_profit / gross_loss, 2) if gross_loss > 0 else (round(gross_profit, 2) if gross_profit > 0 else 0.0)
+
+    # Today's PnL is always based on today, but if filtering, we can just return it from cache
+    today_pnl = cache["stats"].get("today_pnl", 0.0)
+
     return {
         "success": True,
-        "result": cache["stats"]
+        "result": {
+            "total_trades": total_closed,
+            "total_closed": total_closed,
+            "total_open": 0,
+            "total_wins": total_wins,
+            "win_rate": round((total_wins / total_closed * 100), 1) if total_closed > 0 else 0,
+            "total_pnl": round(total_pnl, 2),
+            "today_pnl": today_pnl,
+            "profit_factor": profit_factor
+        }
     }
 
 
