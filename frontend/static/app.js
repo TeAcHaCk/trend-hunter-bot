@@ -1058,11 +1058,22 @@ async function loadAccountSummary() {
         </div>`;
     }).join('');
 
+    // Helper to format INR value with Lakhs/Crores just like Delta Exchange
+    function formatINR(usd) {
+        const inr = usd * 85; // Delta default conversion rate
+        if (inr >= 10000000) return `₹${(inr / 10000000).toFixed(2)}Cr`;
+        if (inr >= 100000) return `₹${(inr / 100000).toFixed(2)}L`;
+        return `₹${inr.toLocaleString('en-IN', {maximumFractionDigits: 2})}`;
+    }
+
     container.innerHTML = `
         <!-- Hero: Account Value -->
         <div class="acct-hero">
             <div class="acct-hero-label">Account Value</div>
             <div class="acct-hero-value" style="color: var(--text-bright)">
+                ${formatINR(wallet.total_usd)}
+            </div>
+            <div class="acct-hero-usd" style="font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: var(--text-muted); margin-bottom: 12px; font-weight: 500;">
                 $${wallet.total_usd.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
             </div>
             <div class="acct-hero-sub">

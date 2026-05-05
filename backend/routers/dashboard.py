@@ -128,19 +128,26 @@ async def get_account_summary():
                             "balance": bal,
                             "available": avail,
                         })
-        # Compute a total USD value (Account Value) by converting all assets
+        # Extract total account value from Delta Exchange 'meta.net_equity' if available
+        # This matches the exact "Account Value" shown in the Delta UI.
         usd_balance = 0.0
-        for b in balances:
-            sym = b["symbol"]
-            bal = b["balance"]
-            if sym in ("USD", "USDT", "USDC"):
-                usd_balance += bal
-            else:
-                # Convert crypto assets to USD using live prices
-                price = bot_runner._get_price(f"{sym}USD") or bot_runner._get_price(f"{sym}USDT")
-                if price > 0:
-                    usd_balance += bal * price
-                    b["usd_value"] = bal * price
+        meta_data = wallet_raw.get("meta", {}) if isinstance(wallet_raw, dict) else {}
+        
+        if "net_equity" in meta_data:
+            usd_balance = float(meta_data["net_equity"])
+        else:
+            # Fallback manual calculation if net_equity is missing
+            for b in balances:
+                sym = b["symbol"]
+                bal = b["balance"]
+                if sym in ("USD", "USDT", "USDC"):
+                    usd_balance += bal
+                else:
+                    # Convert crypto assets to USD using live prices
+                    price = bot_runner._get_price(f"{sym}USD") or bot_runner._get_price(f"{sym}USDT")
+                    if price > 0:
+                        usd_balance += bal * price
+                        b["usd_value"] = bal * price
                 
         summary["wallet"] = {
             "balances": balances,
