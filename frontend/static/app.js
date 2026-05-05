@@ -356,6 +356,16 @@ function updateStrategiesUI() {
             updateBreakoutBar(symbol, price, strat.range_low, strat.range_high);
         }
 
+        // If WS price cache is empty, use strategy's last_price for the main display
+        if (price && !state.prices[symbol]) {
+            const priceEl = document.getElementById(`price-${symbol}`);
+            if (priceEl) {
+                priceEl.textContent = formatPrice(price, symbol);
+                priceEl.classList.remove('skeleton');
+                priceEl.className = 'price-value';
+            }
+        }
+
         // Trade status panel
         const tradePanel = document.getElementById(`trade-status-${symbol}`);
         const orderPanel = document.getElementById(`order-status-${symbol}`);
