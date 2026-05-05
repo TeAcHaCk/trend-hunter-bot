@@ -224,6 +224,11 @@ class DeltaClient:
     async def get_wallet_balances(self) -> Dict:
         return await self._request("GET", "/v2/wallet/balances", auth=True)
 
+    async def get_wallet_transactions(self, page_size: int = 100) -> Dict:
+        """Fetch wallet ledger transactions (useful for realized PnL)."""
+        return await self._request("GET", "/v2/wallet/transactions", 
+                                   params={"page_size": page_size, "type": "realized_pnl"}, auth=True)
+
     async def get_positions(self) -> Dict:
         return await self._request("GET", "/v2/positions/margined", auth=True)
 
