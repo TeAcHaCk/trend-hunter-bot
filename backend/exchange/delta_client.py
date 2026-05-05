@@ -338,6 +338,14 @@ class DeltaClient:
         payload = {"product_id": product_id} if product_id else {}
         return await self._request("DELETE", "/v2/orders/all", data=payload, auth=True)
 
+    async def get_open_orders(self, product_id: Optional[int] = None) -> Dict:
+        """Fetch all open/pending orders from the exchange."""
+        params = {}
+        if product_id:
+            params["product_id"] = product_id
+        params["state"] = "open"
+        return await self._request("GET", "/v2/orders", params=params, auth=True)
+
     async def close_position(self, product_id: int,
                              current_side: str, size: int) -> Dict:
         """Market-close an existing position."""

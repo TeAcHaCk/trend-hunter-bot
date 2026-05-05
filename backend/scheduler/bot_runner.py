@@ -176,18 +176,24 @@ class BotRunner:
     async def _cancel_all_stale_orders(self):
         """Cancel ALL open stop orders on startup to prevent order pileup
         from previous bot sessions / crashes."""
+        # Step 1: Global cancel — nuke everything in one shot
+        try:
+            result = await self.delta_client.cancel_all_orders()  # no product_id = global
+            logger.info(f"Startup: global cancel_all | {result}")
+        except Exception as e:
+            logger.warning(f"Startup: global cancel_all failed: {e}")
+
+        # Step 2: Per-symbol cleanup as backup + clear strategy state
         for symbol in self.strategies:
             strategy = self.strategies[symbol]
-            # Only clean up if we're NOT in a trade (we don't want to cancel SL/TP)
-            if strategy.is_in_trade():
-                continue
-            pid = await self.position_manager.get_product_id(symbol)
-            if pid:
-                try:
-                    result = await self.delta_client.cancel_all_orders(pid)
-                    logger.info(f"[{symbol}] Startup cleanup: cancelled all open orders | {result}")
-                except Exception as e:
-                    logger.warning(f"[{symbol}] Startup cleanup failed: {e}")
+            if not strategy.is_in_trade():
+                pid = await self.position_manager.get_product_id(symbol)
+                if pid:
+                    try:
+                        await self.delta_client.cancel_all_orders(pid)
+                        logger.info(f"[{symbol}] Startup cleanup: cancelled all orders for product")
+                    except Exception as e:
+                        logger.warning(f"[{symbol}] Startup cleanup failed: {e}")
             strategy.clear_orders()
 
     # ── Helpers ───────────────────────────────────────────────────
@@ -1135,20 +1141,33 @@ class BotRunner:
         if self.state != "STOPPED":
             await self.stop()
 
-        # 2. Cancel all orders on the exchange for every symbol
+        # 2. Cancel ALL orders on the exchange (global — no product_id filter)
         # Re-create client if closed
         if self.delta_client._session is None or self.delta_client._session.closed:
             self.delta_client = DeltaClient()
             self.position_manager.client = self.delta_client
 
-        for symbol in list(self.strategies.keys()):
+        # Global cancel — wipes ALL orders across ALL products in one shot
+        for attempt in range(3):
             try:
-                pid = await self.position_manager.get_product_id(symbol)
-                if pid:
-                    await self.delta_client.cancel_all_orders(pid)
-                    logger.info(f"[{symbol}] Reset: cancelled all orders on exchange")
+                result = await self.delta_client.cancel_all_orders()  # no product_id = global
+                logger.info(f"Reset: global cancel_all attempt {attempt+1} | result: {result}")
+                await asyncio.sleep(1)  # Give exchange time to process
+
+                # Verify: check if any orders still exist
+                remaining = await self.delta_client.get_open_orders()
+                open_orders = []
+                if remaining.get("success") and remaining.get("result"):
+                    open_orders = remaining["result"]
+                if not open_orders:
+                    logger.info("Reset: ✓ Verified — no orders remain on exchange")
+                    break
+                else:
+                    logger.warning(
+                        f"Reset: {len(open_orders)} orders still on exchange after cancel — retrying"
+                    )
             except Exception as e:
-                logger.warning(f"[{symbol}] Reset: cancel orders failed: {e}")
+                logger.warning(f"Reset: cancel attempt {attempt+1} failed: {e}")
 
         # 3. Wipe ALL data from database (state + trade logs)
         try:
