@@ -128,19 +128,22 @@ app.include_router(trades.router)
 @app.get("/", response_class=HTMLResponse)
 async def serve_dashboard():
     """Serve the main dashboard page."""
-    return FileResponse(str(FRONTEND_DIR / "index.html"))
+    headers = {"Cache-Control": "no-cache, no-store, must-revalidate"}
+    return FileResponse(str(FRONTEND_DIR / "index.html"), headers=headers)
 
 
 @app.get("/settings", response_class=HTMLResponse)
 async def serve_settings():
     """Serve the settings page."""
-    return FileResponse(str(FRONTEND_DIR / "settings.html"))
+    headers = {"Cache-Control": "no-cache, no-store, must-revalidate"}
+    return FileResponse(str(FRONTEND_DIR / "settings.html"), headers=headers)
 
 
 @app.get("/trades", response_class=HTMLResponse)
 async def serve_trades():
     """Serve the trade log page."""
-    return FileResponse(str(FRONTEND_DIR / "trades.html"))
+    headers = {"Cache-Control": "no-cache, no-store, must-revalidate"}
+    return FileResponse(str(FRONTEND_DIR / "trades.html"), headers=headers)
 
 
 @app.get("/health")
