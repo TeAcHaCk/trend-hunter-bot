@@ -354,7 +354,7 @@ class DeltaClient:
                                   stop_loss_price: float,
                                   take_profit_price: float,
                                   trail_amount: Optional[float] = None,
-                                  bracket_stop_trigger_method: str = "last_traded_price") -> Dict:
+                                  bracket_stop_trigger_method: str = "mark_price") -> Dict:
         """Attach SL/TP bracket to an existing position via PUT /v2/orders/bracket.
 
         Uses the nested stop_loss_order / take_profit_order format required by
@@ -388,7 +388,7 @@ class DeltaClient:
     async def edit_bracket_order(self, product_id: int,
                                  stop_loss_price: Optional[float] = None,
                                  take_profit_price: Optional[float] = None,
-                                 bracket_stop_trigger_method: str = "last_traded_price") -> Dict:
+                                 bracket_stop_trigger_method: str = "mark_price") -> Dict:
         """Edit an existing bracket SL/TP on a position (PUT /v2/orders/bracket)."""
         payload: Dict[str, Any] = {
             "product_id": product_id,

@@ -50,7 +50,7 @@ class Settings:
         "lookback_candles": 8,
         # ATR-based bracket exits (with sensible bounds)
         "sl_atr_mult": 1.5,
-        "tp_atr_mult": 2.5,
+        "tp_atr_mult": 1.5,  # 1:1 Risk:Reward ratio
         "min_sl_pct": 0.15,
         "max_sl_pct": 1.5,
         # Filters (volume filter OFF by default — enable for production)

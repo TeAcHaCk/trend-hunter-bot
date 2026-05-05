@@ -545,14 +545,18 @@ class BotRunner:
             sl_price = levels["stop_loss"]
             tp_price = levels["take_profit"]
 
-            # Cancel opposite leg immediately
-            cancel_tasks = []
-            if other_order_id:
-                cancel_tasks.append(asyncio.create_task(
-                    self.delta_client.cancel_order(product_id, other_order_id)
-                ))
-            if cancel_tasks:
-                await asyncio.gather(*cancel_tasks, return_exceptions=True)
+            # Cancel opposite leg + sweep ALL stale orders immediately
+            try:
+                await self.delta_client.cancel_all_orders(product_id)
+                logger.info(f"[{symbol}] Cleared all pending orders before SL/TP placement")
+            except Exception as e:
+                logger.warning(f"[{symbol}] cancel_all before bracket failed: {e}")
+
+            # Place bracket SL/TP
+            logger.info(
+                f"[{symbol}] Placing bracket | SL=${sl_price:,.2f} | TP=${tp_price:,.2f} | "
+                f"RR=1:1 | size={abs(actual_size)}"
+            )
 
             # Try bracket order first (PUT /v2/orders/bracket)
             bracket_ok = await self._place_bracket_with_fallback(

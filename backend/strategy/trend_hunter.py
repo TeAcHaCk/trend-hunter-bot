@@ -240,17 +240,17 @@ class TrendHunterStrategy:
     # ── SL/TP ──
 
     def calculate_sl_tp(self, entry_price: float, direction: str) -> Dict[str, float]:
-        """ATR-based SL/TP with min/max bounds in % of entry price."""
+        """ATR-based SL/TP with strict 1:1 Risk:Reward ratio."""
         atr = self._atr or 0.0
         sl_dist = atr * self.sl_atr_mult
-        tp_dist = atr * self.tp_atr_mult
 
         # Apply min/max bounds (% of entry)
         min_dist = entry_price * (self.min_sl_pct / 100.0)
         max_dist = entry_price * (self.max_sl_pct / 100.0)
         sl_dist = max(min_dist, min(sl_dist, max_dist))
-        # Keep TP at least the same distance as SL (≥1:1 RR)
-        tp_dist = max(tp_dist, sl_dist)
+
+        # Strict 1:1 Risk:Reward — TP distance always equals SL distance
+        tp_dist = sl_dist
 
         if direction == "LONG":
             sl = round(entry_price - sl_dist, 2)

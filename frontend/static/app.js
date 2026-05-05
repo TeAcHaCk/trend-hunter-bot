@@ -399,20 +399,38 @@ function updateStrategiesUI() {
                 // Buy order
                 const buyPrice = document.getElementById(`order-buy-price-${symbol}`);
                 const buyId = document.getElementById(`order-buy-id-${symbol}`);
-                if (buyPrice && strat.breakout_high) buyPrice.textContent = formatPrice(strat.breakout_high, symbol);
-                if (buyId && strat.long_order_id) buyId.textContent = `#${strat.long_order_id}`;
+                if (buyPrice) {
+                    if (strat.long_order_id) {
+                        buyPrice.textContent = formatPrice(strat.breakout_high, symbol);
+                    } else {
+                        buyPrice.textContent = '—';
+                    }
+                }
+                if (buyId) {
+                    buyId.textContent = strat.long_order_id ? `#${strat.long_order_id}` : 'Filtered';
+                    buyId.style.opacity = strat.long_order_id ? '1' : '0.4';
+                }
 
                 // Sell order
                 const sellPrice = document.getElementById(`order-sell-price-${symbol}`);
                 const sellId = document.getElementById(`order-sell-id-${symbol}`);
-                if (sellPrice && strat.breakout_low) sellPrice.textContent = formatPrice(strat.breakout_low, symbol);
-                if (sellId && strat.short_order_id) sellId.textContent = `#${strat.short_order_id}`;
+                if (sellPrice) {
+                    if (strat.short_order_id) {
+                        sellPrice.textContent = formatPrice(strat.breakout_low, symbol);
+                    } else {
+                        sellPrice.textContent = '—';
+                    }
+                }
+                if (sellId) {
+                    sellId.textContent = strat.short_order_id ? `#${strat.short_order_id}` : 'Filtered';
+                    sellId.style.opacity = strat.short_order_id ? '1' : '0.4';
+                }
 
                 // Drift-free countdown — derive remaining from server timestamp
                 const timerEl = document.getElementById(`order-timer-${symbol}`);
                 if (timerEl) {
                     const placedAt = strat.orders_placed_at;             // unix seconds
-                    const expiry = strat.order_expiry_seconds || 1800;
+                    const expiry = strat.order_expiry_seconds || 600;
                     if (placedAt) {
                         const remainingSec = Math.max(
                             0,
@@ -424,14 +442,19 @@ function updateStrategiesUI() {
                             `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
                         timerEl.style.color = remainingSec < 120
                             ? 'var(--red)'
-                            : remainingSec < 600 ? 'var(--amber)' : '';
+                            : remainingSec < 300 ? 'var(--amber)' : '';
+
+                        // Auto-hide panel when timer hits 0 (server will cancel)
+                        if (remainingSec <= 0) {
+                            orderPanel.style.display = 'none';
+                        }
                     } else {
                         timerEl.textContent = '--:--';
                     }
                 }
             }
         } else {
-            // No trade, no orders
+            // No trade, no orders — immediately hide both panels
             if (tradePanel) tradePanel.style.display = 'none';
             if (orderPanel) orderPanel.style.display = 'none';
             // Reset timer tracking
