@@ -335,23 +335,34 @@ class DeltaClient:
         return await self._request("DELETE", "/v2/orders", data=payload, auth=True)
 
     async def cancel_all_orders(self, product_id: Optional[int] = None) -> Dict:
-        """Nuke ALL orders. Uses bulk delete, then actively hunts down and cancels stragglers."""
-        payload = {"product_id": product_id} if product_id else {}
-        bulk_res = await self._request("DELETE", "/v2/orders/all", data=payload, auth=True)
-        
-        # Ensure stubborn orders (like Stop Market / pending) are actually removed
+        """Cancel ALL entry orders but explicitly PRESERVE any SL/TP orders 
+        that protect active positions.
+        """
+        cancelled_count = 0
         try:
             remaining = await self.get_open_orders(product_id)
             if remaining.get("success") and remaining.get("result"):
                 for order in remaining["result"]:
+                    # Preserve Bracket / SL / TP orders (they protect open positions).
+                    # Protective orders ALWAYS have reduce_only = True.
+                    # Entry orders ALWAYS have reduce_only = False.
+                    is_reduce_only = order.get("reduce_only", False)
+                    
+                    if is_reduce_only:
+                        logger.debug(f"Skipping SL/TP/Reduce-Only order: {order['id']}")
+                        continue
+                        
+                    # This is an entry order (reduce_only=False), nuke it
                     try:
                         await self.cancel_order(order["product_id"], order["id"])
+                        cancelled_count += 1
                     except Exception as order_e:
-                        logger.warning(f"Failed to cancel individual straggler {order['id']}: {order_e}")
+                        logger.warning(f"Failed to cancel order {order['id']}: {order_e}")
+                        
+            return {"success": True, "message": f"Cancelled {cancelled_count} entry orders"}
         except Exception as e:
-            logger.warning(f"Failed to fetch straggler orders for cleanup: {e}")
-            
-        return bulk_res
+            logger.warning(f"Failed to clear entry orders: {e}")
+            return {"success": False, "error": str(e)}
 
     async def get_open_orders(self, product_id: Optional[int] = None) -> Dict:
         """Fetch all open/pending orders from the exchange."""
