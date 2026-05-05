@@ -1130,7 +1130,7 @@ class BotRunner:
         logger.info("🛑 Bot STOPPED")
 
     async def reset(self):
-        """Full reset: stop bot, cancel all exchange orders, wipe all state."""
+        """Full reset: stop bot, cancel all exchange orders, wipe ALL state + trade history."""
         # 1. Stop the bot if running
         if self.state != "STOPPED":
             await self.stop()
@@ -1150,19 +1150,28 @@ class BotRunner:
             except Exception as e:
                 logger.warning(f"[{symbol}] Reset: cancel orders failed: {e}")
 
-        # 3. Wipe persisted state from database
+        # 3. Wipe ALL data from database (state + trade logs)
         try:
             async with async_session() as session:
+                # Delete bot state snapshot
                 row = await session.execute(
                     select(BotSettings).where(BotSettings.key == STATE_KEY)
                 )
                 existing = row.scalar_one_or_none()
                 if existing:
                     await session.delete(existing)
-                    await session.commit()
-                    logger.info("Reset: cleared persisted bot state from DB")
+
+                # Delete ALL trade logs
+                from backend.models.trade_log import TradeLog
+                result = await session.execute(select(TradeLog))
+                all_trades = result.scalars().all()
+                for trade in all_trades:
+                    await session.delete(trade)
+
+                await session.commit()
+                logger.info(f"Reset: cleared bot state + {len(all_trades)} trade logs from DB")
         except Exception as e:
-            logger.warning(f"Reset: failed to clear DB state: {e}")
+            logger.warning(f"Reset: failed to clear DB: {e}")
 
         # 4. Reset all in-memory state
         self.total_signals = 0
@@ -1184,7 +1193,7 @@ class BotRunner:
         self.initialize()
 
         await self.delta_client.close()
-        logger.info("🔄 Bot RESET — all state cleared, ready for fresh start")
+        logger.info("🔄 Bot RESET — all state + trade history cleared")
 
     async def pause(self):
         self.state = "PAUSED"
