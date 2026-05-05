@@ -779,20 +779,30 @@ function renderTradesTable(trades) {
     }
 
     tbody.innerHTML = trades.map(t => {
-        const dirClass = t.direction === 'LONG' ? 'td-long' : 'td-short';
+        const dirClass = t.direction.toUpperCase() === 'LONG' ? 'td-long' : 'td-short';
         const pnlClass = t.pnl > 0 ? 'td-pnl-pos' : t.pnl < 0 ? 'td-pnl-neg' : '';
         const pnlText = t.pnl != null ? formatPnL(t.pnl) : '—';
+        const feeText = t.fee != null ? formatPrice(t.fee) : '—';
         const time = t.timestamp ? new Date(t.timestamp).toLocaleString() : '—';
+        
+        let exitBadge = t.exit_type;
+        if (t.exit_type === 'TP') {
+            exitBadge = `<span style="background: rgba(16, 185, 129, 0.2); color: var(--green); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">Hit TP 🎯</span>`;
+        } else if (t.exit_type === 'SL') {
+            exitBadge = `<span style="background: rgba(239, 68, 68, 0.2); color: var(--red); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">Hit SL 🛑</span>`;
+        } else {
+            exitBadge = `<span style="color: var(--text-muted); font-size: 0.8rem;">${t.exit_type}</span>`;
+        }
 
         return `<tr>
             <td>${time}</td>
             <td class="td-symbol">${t.symbol}</td>
-            <td class="${dirClass}">${t.direction === 'LONG' ? '↑' : '↓'} ${t.direction}</td>
-            <td>${formatPrice(t.entry_price, t.symbol)}</td>
-            <td>${t.exit_price ? formatPrice(t.exit_price, t.symbol) : '—'}</td>
-            <td>${t.quantity}</td>
+            <td class="${dirClass}">${t.direction.toUpperCase() === 'LONG' ? '↑' : '↓'} ${t.direction.toUpperCase()}</td>
+            <td>${formatPrice(t.price, t.symbol)}</td>
+            <td>${t.size}</td>
             <td class="${pnlClass}">${pnlText}</td>
-            <td>${t.status}</td>
+            <td>${feeText}</td>
+            <td>${exitBadge}</td>
         </tr>`;
     }).join('');
 }

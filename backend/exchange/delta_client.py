@@ -239,6 +239,11 @@ class DeltaClient:
         return await self._request("GET", "/v2/orders/history",
                                    params={"page_size": page_size}, auth=True)
 
+    async def get_fills(self, page_size: int = 100) -> Dict:
+        """Fetch user trade history / fills (includes realized PnL)."""
+        return await self._request("GET", "/v2/fills",
+                                   params={"page_size": page_size}, auth=True)
+
     async def place_order(self, product_id: int,
                           side: str, size: int,
                           order_type: str = "market_order",
