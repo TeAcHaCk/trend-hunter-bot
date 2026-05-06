@@ -39,58 +39,19 @@ async def _fetch_and_cache_trades():
         # Fetch from Delta Exchange API
         fills_res = await bot_runner.delta_client.get_fills(page_size=100)
         orders_res = await bot_runner.delta_client.get_order_history(page_size=100)
-        wallet_res = await bot_runner.delta_client.get_wallet_transactions(page_size=100)
-
-        # DEBUG: Dump to file so we can see the exact JSON structure
-        try:
-            import json
-            with open("delta_debug.json", "w") as f:
-                json.dump({
-                    "fills": fills_res,
-                    "orders": orders_res,
-                    "wallet": wallet_res
-                }, f, indent=2)
-        except Exception as e:
-            logger.error(f"Failed to dump debug json: {e}")
 
         fills = fills_res.get("result", []) if isinstance(fills_res, dict) else []
         orders = orders_res.get("result", []) if isinstance(orders_res, dict) else []
-        wallet = wallet_res.get("result", []) if isinstance(wallet_res, dict) else []
 
-        # Map orders by ID to identify TP/SL
+        # Map orders by ID to identify exit type (TP/SL)
+        # Key fields from Delta API: order_type, stop_order_type, bracket_stop_loss_price, bracket_take_profit_price
         order_map = {str(o.get("id", "")): o for o in orders}
-
-        # Build mapping of order_id -> realized_pnl from wallet transactions
-        wallet_pnl_map = {}
-        wallet_fee_map = {}
-        for txn in wallet:
-            txn_type = txn.get("type", "")
-            meta = txn.get("meta", {})
-            # meta might have order_id or transaction_id
-            oid = str(meta.get("order_id", ""))
-            amount = float(txn.get("amount", 0) or 0)
-            
-            if txn_type == "realized_pnl" and oid:
-                wallet_pnl_map[oid] = wallet_pnl_map.get(oid, 0.0) + amount
-            elif txn_type == "trading_fee" and oid:
-                wallet_fee_map[oid] = wallet_fee_map.get(oid, 0.0) + amount
-
-        # Fetch accurate PnL calculations from local bot DB
-        pnl_map = {}
-        try:
-            async with async_session() as session:
-                res = await session.execute(select(TradeLog).where(TradeLog.pnl.is_not(None)))
-                for row in res.scalars():
-                    if row.close_order_id:
-                        pnl_map[str(row.close_order_id)] = row.pnl
-        except Exception as e:
-            logger.warning(f"Failed to fetch TradeLog PnL: {e}")
 
         formatted_trades = []
         total_pnl = 0.0
         today_pnl = 0.0
         total_wins = 0
-        total_closed = len(fills)
+        total_losses = 0
 
         today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -98,34 +59,25 @@ async def _fetch_and_cache_trades():
             order_id = str(fill.get("order_id", ""))
             order_obj = order_map.get(order_id, {})
             
-            # Parse PnL & Fee
-            # 1. Try fill's realized_pnl
-            # 2. Try order's realized_pnl
-            # 3. Try Wallet Ledger transactions (most reliable for Delta manual trades)
-            # 4. Fallback to Bot's accurate local TradeLog
-            fill_pnl = float(fill.get("realized_pnl", 0) or 0)
-            if fill_pnl == 0:
-                fill_pnl = float(order_obj.get("realized_pnl", 0) or 0)
-                
-            if fill_pnl == 0 and order_id in wallet_pnl_map:
-                fill_pnl = float(wallet_pnl_map[order_id])
-                del wallet_pnl_map[order_id]  # prevent double counting
-                
-            if fill_pnl == 0 and order_id in pnl_map:
-                fill_pnl = float(pnl_map[order_id])
-                del pnl_map[order_id]  # prevent double counting on partial fills
-                
-            fill_fee = float(fill.get("fee", 0) or 0)
-            if fill_fee == 0:
-                fill_fee = float(order_obj.get("fee", 0) or 0)
-            if fill_fee == 0 and order_id in wallet_fee_map:
-                fill_fee = float(wallet_fee_map[order_id])
-                del wallet_fee_map[order_id]
+            # === REAL PNL EXTRACTION ===
+            # Delta Exchange API puts realized_pnl inside fill.meta_data.new_position
+            # It only appears when a fill CLOSES a position (new_position.size == 0)
+            meta_data = fill.get("meta_data", {}) or {}
+            new_pos = meta_data.get("new_position", {}) or {}
             
-            # For accurate stats, realized_pnl from delta is generally what we want
+            # Primary source: meta_data.new_position.realized_pnl
+            fill_pnl = float(new_pos.get("realized_pnl", 0) or 0)
+            
+            # === REAL FEE EXTRACTION ===
+            # Fee is stored as "commission" at the top level of fills (NOT "fee")
+            fill_fee = float(fill.get("commission", 0) or 0)
+            
+            # Stats
             total_pnl += fill_pnl
             if fill_pnl > 0:
                 total_wins += 1
+            elif fill_pnl < 0:
+                total_losses += 1
 
             # Parse Timestamp
             created_at_str = fill.get("created_at")
@@ -142,19 +94,29 @@ async def _fetch_and_cache_trades():
             if fill_time >= today_start:
                 today_pnl += fill_pnl
 
-            # Determine Exit Type (TP/SL/Manual)
-            exit_type = "Market/Manual"
+            # === EXIT TYPE DETECTION ===
+            # Delta API uses stop_order_type for stop-based exits
+            # Values: "stop_order", "take_profit_order", None
+            exit_type = "Entry/Market"
             
-            if order_id and order_id in order_map:
-                o_type = order_map[order_id].get("order_type", "").lower()
-                o_type_str = str(o_type)
-                if "take_profit" in o_type_str or "tp" in o_type_str:
-                    exit_type = "TP"
-                elif "stop" in o_type_str or "sl" in o_type_str:
-                    exit_type = "SL"
+            # Check if this fill closes a position (realized PnL > 0 means closing)
+            is_closing = fill_pnl != 0 or float(new_pos.get("size", -1)) == 0
+            
+            if order_obj:
+                stop_type = str(order_obj.get("stop_order_type", "") or "").lower()
+                
+                if "take_profit" in stop_type:
+                    exit_type = "Hit TP 🎯"
+                elif "stop_loss" in stop_type:
+                    exit_type = "Hit SL 🛑"
+                elif is_closing:
+                    exit_type = "Closed"
+                elif "buy" == fill.get("side", "").lower():
+                    exit_type = "Entry Long"
+                else:
+                    exit_type = "Entry Short"
 
-            # Fills symbol is typically returned as 'symbol' or 'product_symbol'
-            symbol = fill.get("symbol") or fill.get("product_symbol") or f"Product {fill.get('product_id', '?')}"
+            symbol = fill.get("product_symbol") or fill.get("symbol") or f"Product {fill.get('product_id', '?')}"
 
             formatted_trades.append({
                 "id": str(fill.get("id", "")),
@@ -162,26 +124,27 @@ async def _fetch_and_cache_trades():
                 "direction": "long" if fill.get("side", "").lower() == "buy" else "short",
                 "size": float(fill.get("size", 0) or 0),
                 "price": float(fill.get("price", 0) or 0),
-                "pnl": fill_pnl,
-                "fee": fill_fee,
+                "pnl": round(fill_pnl, 4),
+                "fee": round(fill_fee, 4),
                 "timestamp": fill_time.isoformat() + "Z",
                 "exit_type": exit_type,
                 "status": "closed"
             })
 
+        total_with_pnl = total_wins + total_losses
         _trade_cache["trades"] = formatted_trades
         
         # Calculate gross metrics for profit factor
-        gross_profit = sum(float(f.get("realized_pnl", 0) or 0) for f in fills if float(f.get("realized_pnl", 0) or 0) > 0)
-        gross_loss = abs(sum(float(f.get("realized_pnl", 0) or 0) for f in fills if float(f.get("realized_pnl", 0) or 0) < 0))
+        gross_profit = sum(t["pnl"] for t in formatted_trades if t["pnl"] > 0)
+        gross_loss = abs(sum(t["pnl"] for t in formatted_trades if t["pnl"] < 0))
         profit_factor = round(gross_profit / gross_loss, 2) if gross_loss > 0 else (round(gross_profit, 2) if gross_profit > 0 else 0.0)
 
         _trade_cache["stats"] = {
-            "total_trades": total_closed,
-            "total_closed": total_closed,
+            "total_trades": len(fills),
+            "total_closed": len(fills),
             "total_open": 0,
             "total_wins": total_wins,
-            "win_rate": round((total_wins / total_closed * 100), 1) if total_closed > 0 else 0,
+            "win_rate": round((total_wins / total_with_pnl * 100), 1) if total_with_pnl > 0 else 0,
             "total_pnl": round(total_pnl, 2),
             "today_pnl": round(today_pnl, 2),
             "profit_factor": profit_factor
@@ -190,7 +153,7 @@ async def _fetch_and_cache_trades():
         _trade_cache["timestamp"] = now
 
     except Exception as e:
-        logger.error(f"Failed to fetch trades from Delta API: {e}")
+        logger.error(f"Failed to fetch trades from Delta API: {e}", exc_info=True)
 
     return _trade_cache
 
